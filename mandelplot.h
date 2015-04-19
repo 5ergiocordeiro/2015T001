@@ -1,12 +1,4 @@
 // Constants
-// problem parameters
-const int MAXITERS = 10000 ;
-// visualization
-const int DEFAULTZOOM = 2 ;
-const int DEFAULTHUE = 60 ;
-const int MAXHUE = 359 ;
-const double MINSAT = 0.5 ;
-const double DEFAULTSAT = 1 ;
 // widgets
 const int SEPARATION = 5 ;
 const int MAXWIDTH = 1000 ;
@@ -21,13 +13,15 @@ const int WINDOWBORDER = 5 ;
 const int STATUSMSGSZ = 200 ;
 const int MENUHEIGHT  = 30 ;
 const int POINTRADIUS = 10 ;
-const double GAMBIFACTOR1 = 0.99 ;
-const double GAMBIFACTOR2 = 1.01 ;
-const int DRAWAREAWIDTH = 100 ;
-const int MAXDRAWAREA = 1 + MAXWIDTH / DRAWAREAWIDTH ;
-const int MAXOCLGPUS = 1 ;
-const int OCLLOGSIZE = 2048 ;
-const int OCLTSTSIZE = 2048 ;
+
+const int DRAWAREAWIDTH = 1000 ;
+const int MAXDRAWAREA = 1 ;
+const int NUMVARS = 9 ;
+const int BUFFSIZE = 1000 ;
+const int QUALITY_GOOD = 192 ;
+const char * EXCEL_SERVER_NAME = "Microsoft Excel - dde.xls" ;
+const char * THIS_APP_NAME = "C:\\WINDOWS\\system32\\cmd.exe - a" ;
+const char * DDE_SERVER_NAME = "DDE Server Window" ;
 
 
 // well-known, reserved colors
@@ -43,10 +37,8 @@ typedef enum { MMODE_NONE , MMODE_CENTER , MMODE_PATH , MMODE_REGION } MMode ;
 
 // Structs to storing data shared among functions
 typedef	struct {
-	int width , height , zoom , maxiters , hue ;
-	double minx , maxx , miny , maxy , saturation , centerx , centery ;
-	bool showMP ;
-	MMode mmode ;
+	int width , height ;
+	char DDEstr [NUMVARS] [20] ;	
 	} WindowData ;
 	
 typedef	struct {
@@ -56,13 +48,28 @@ typedef	struct {
 	} PointData ;
 
 typedef struct {
-	bool first , ocl ;
-	GdkRectangle dirty ;
-	WindowData * current , * newdata , * original ;
-	PointData newpath , newregion ;
-	GdkRGBA * vbuf , * dbuf , * wbuf ;
+	char cdia [20] , cmes [20] ;
+	int dia, mes;
+	char tag [20] ;
+	} SumData ;
+
+typedef struct {
+	int var ;
+	float value ;
+	int quality ;
+	char tstamp [20] ;
+	} ReadData ;
+
+	
+typedef struct {
+	int rpos , wpos ;
+	bool first ;
+	WindowData * original ;
 	GtkWidget * msg , * draw [ MAXDRAWAREA ] ;
 	int num_areas , area_width [ MAXDRAWAREA ] ;
+	SumData total [ NUMVARS ] ;
+	ReadData buffer [ BUFFSIZE ] ;
+	char res[20];
 	} PanelData ;
 
 	
@@ -114,3 +121,9 @@ void markregion ( PointData * region , GdkRGBA * wbuf , int width , GdkRectangle
 float timeval_subtract ( struct timeval * result, struct timeval * x, struct timeval * y ) ;
 void defplotarea ( GtkWidget * window , int width , int height , int posh , int posv , PanelData * plotdata ) ;
 void paintdirty ( GdkRectangle * dirty , PanelData * plotdata ) ;
+
+void totalize ( PanelData * plotdata ) ;
+int DDEInitiate() ;
+void DDETerminate() ;
+void readDDE ( PanelData * plotdata ) ;
+BOOL CALLBACK lpfn(HWND hWnd, int lParam) ;

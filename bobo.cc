@@ -6,10 +6,16 @@
 #include <vector>
 #include <sys/time.h>
 #include <omp.h>
+#include <windows.h>
+#include <dde.h>
+
 
 using namespace std;
 #include "mandelplot.h"
 #include "menubar.h"
+
+
+HWND Gclient , Gserver , Gexcel ;
 
 
 // Functions
@@ -26,7 +32,8 @@ int main ( int argc , char * argv [ ] ) {
 	PanelData pdata ;
 	pdata . first = true ;
 	pdata . original = & original ;
-
+	pdata . wpos = pdata . rpos = 0 ;
+	
 	// Initializes the GTK+ ttolkit
 	int dumbi = 1 ;
 	gtk_init ( & dumbi , NULL ) ;
@@ -91,7 +98,7 @@ void gtkinit ( GtkWidget * window , const char * title , GtkWindowPosition posit
 	g_signal_connect_swapped ( G_OBJECT ( window ) , "destroy" , G_CALLBACK ( gtk_main_quit ) , NULL ) ;
 	// Defines frames
 	GtkWidget * mainframe = defframe ( window , -1 , "" , WINDOWBORDER , 0 , 0 , 0 , 0 ) ;
-	GtkWidget * plotframe = defframe ( mainframe , GTK_SHADOW_IN , "Plot window" , 0 , 0 , MENUHEIGHT , width , height ) ;
+	GtkWidget * plotframe = defframe ( mainframe , GTK_SHADOW_IN , "Results" , 0 , 0 , MENUHEIGHT , width , height ) ;
 	GtkWidget * ctrlframe = defframe ( mainframe , GTK_SHADOW_OUT , "Control bar" , 0 , width + SEPARATION , MENUHEIGHT , CTRLBARWIDTH , CTRLBARHEIGHT ) ;
 	// Creates menu bar
 	if ( defmenubar ( window , mainframe , plotdata ) == NULL ) {
@@ -126,9 +133,89 @@ void gtkinit ( GtkWidget * window , const char * title , GtkWindowPosition posit
 
 void UpdateP ( PanelData * plotdata ) {
 // Plots Mandelbrot set
+
+	int var ;
+	if ( plotdata -> first ) {
+		for ( var = 0 ; var < NUMVARS ; ++ var ) {
+			plotdata -> total [ var ] . dia = var ;
+			plotdata -> total [ var ] . mes = 10 * var ;
+			sprintf ( plotdata -> total [ var ] . tag , "tag%d" , var ) ;
+			}
+		EnumWindows( (WNDENUMPROC) & lpfn, 0);
+/*
+		char app[] = "Excel";
+		char topic[] = "[dde.xls]Sheet1";
+		long res1 = SendMessage ( Gserver , WM_DDE_INITIATE , (WPARAM) Gclient , MAKELPARAM ( app , topic ) ) ;
+		long res2 = SendMessage ( Gexcel , WM_DDE_INITIATE , (WPARAM) Gclient , MAKELPARAM ( app , topic ) ) ;
+		sprintf(plotdata -> res , "%ld %ld %ld %ld" , (long) Gserver, (long) Gclient, res1, res2) ;
+*/
+		sprintf(plotdata -> res, "") ;
+		//SendMessage ( server , WM_DDE_POKE , client , MAKELPARAM ( app , topic ) ) ;		
+		}
+	plotdata -> first = false ;
+	
+	readDDE ( plotdata ) ;
+	totalize ( plotdata ) ;
+	for ( var = 0 ; var < NUMVARS ; ++ var ) {
+		sprintf ( plotdata -> total [ var ] . cdia , "%d" , plotdata -> total [ var ] . dia ) ;
+		sprintf ( plotdata -> total [ var ] . cmes , "%d" , plotdata -> total [ var ] . mes ) ;
+		}
 	return;
 	}
 
+BOOL CALLBACK lpfn( HWND hWnd, int lParam) {
+	char title [99];
+	int size ;
+	size = GetWindowText(hWnd, title, 100);
+	if(size > 0) {
+/*
+		if(strcmp(THIS_APP_NAME , title) == 0) {
+			Gclient = hWnd ;
+			cerr << title << ": " << hWnd << "\n" ;
+			}
+		if(strcmp(DDE_SERVER_NAME, title) == 0) {
+			Gserver = hWnd ;
+			cerr << title << ": " << hWnd << "\n" ;
+			}
+		if(strcmp(EXCEL_SERVER_NAME, title) == 0) {
+			Gexcel = hWnd ;
+			cerr << title << ": " << hWnd << "\n" ;
+			}
+*/
+		cerr << title << ": " << hWnd << "\n" ;
+		}
+    return true;
+	}
+
+void readDDE ( PanelData * plotdata ) {
+	
+	}
+	
+void totalize ( PanelData * plotdata ) {
+	int wpos = plotdata -> wpos ;
+	int rpos = plotdata -> rpos ;
+	ReadData * buf ;
+	float totals [ NUMVARS ] ;
+	int var ;
+	for ( var = 0 ; var < NUMVARS ; ++ var ) {
+		totals [ var ] = plotdata -> total [ var ] . dia ;
+		}
+	int i = wpos ;
+	while ( i != rpos ) {
+		int qual = buf [ i ] . quality ;
+		if ( qual == QUALITY_GOOD ) {
+			var = buf [ i ] . var ;
+			totals [ var ] = totals [ var ] + buf [ i ] . value ;
+			}
+		if ( ++ i > BUFFSIZE ) {
+			i = 0 ;
+			}
+		}
+	for ( var = 0 ; var < NUMVARS ; ++ var ) {
+		plotdata -> total [ var ] . dia = totals [ var ] ;
+		}
+	}
+	
 
 float timeval_subtract ( struct timeval * result, struct timeval * x, struct timeval * y ) {
 /* Perform the carry for the later subtraction by updating y. */
@@ -267,13 +354,42 @@ gboolean userclkoff ( GtkWidget * widget , GdkEvent * event , gpointer user_data
 		
 gboolean userclkon ( GtkWidget * widget , GdkEvent * event , gpointer user_data ) {
 // Handles the event "mouse button pressed" event on the drawing areas
-	
+
+	PanelData * plotdata = ( PanelData * ) user_data ;
+	plotdata -> total [0] . dia ++ ;
+	UpdateP ( plotdata ) ;
+	gtk_widget_queue_draw_area ( plotdata -> draw [ 0 ] , 0 , 0 , ( plotdata -> area_width ) [ 0 ] , plotdata -> original -> height ) ;
 	return false ;
 	}
 
 gboolean draw ( GtkWidget * widget , cairo_t * cr , gpointer user_data ) {
 // handles the "draw" event on the drawing areas.
+  
+	PanelData * plotdata = ( PanelData * ) user_data ;
+	SumData * result = plotdata -> total ;
+
+	cairo_set_source_rgb(cr, 0.1, 0.1, 0.1); 
+	cairo_select_font_face(cr, "Purisa" , CAIRO_FONT_SLANT_NORMAL , CAIRO_FONT_WEIGHT_BOLD ) ;
+	cairo_set_font_size(cr, 13);
+
+	cairo_move_to ( cr , 30 , 30 ) ;
+	cairo_show_text ( cr , "Tag" ) ;
+	cairo_move_to ( cr , 90 , 30 ) ;
+	cairo_show_text ( cr , "Dia" ) ;
+	cairo_move_to ( cr , 150 , 30 ) ;
+	cairo_show_text ( cr , "Mes" ) ;
 	
+	int var ;
+	for ( var = 0 ; var < NUMVARS ; ++ var ) {
+		cairo_move_to ( cr , 30 , 30 * ( var + 2 ) ) ;
+		cairo_show_text ( cr , result [ var ] . tag ) ;  
+		cairo_move_to ( cr , 90 , 30 * ( var + 2 ) ) ;
+		cairo_show_text ( cr , result [ var ] . cdia ) ;  
+		cairo_move_to ( cr , 150 , 30 * ( var + 2 ) ) ;
+		cairo_show_text( cr , result [ var ] . cmes ) ;
+		}
+	cairo_move_to ( cr , 30 , 350 ) ;
+	cairo_show_text ( cr , plotdata -> res ) ;  
 	return false;
 	}
 	
