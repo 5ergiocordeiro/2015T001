@@ -16,12 +16,13 @@ const int POINTRADIUS = 10 ;
 
 const int DRAWAREAWIDTH = 1000 ;
 const int MAXDRAWAREA = 1 ;
+
 const int NUMVARS = 9 ;
 const int BUFFSIZE = 1000 ;
 const int QUALITY_GOOD = 192 ;
 const char * EXCEL_SERVER_NAME = "Microsoft Excel - dde.xls" ;
 const char * THIS_APP_NAME = "C:\\WINDOWS\\system32\\cmd.exe - a" ;
-const char * DDE_SERVER_NAME = "DDE Server Window" ;
+const char * DDE_SERVER_NAME = "FIX DDE Server" ;
 
 
 // well-known, reserved colors
@@ -38,7 +39,11 @@ typedef enum { MMODE_NONE , MMODE_CENTER , MMODE_PATH , MMODE_REGION } MMode ;
 // Structs to storing data shared among functions
 typedef	struct {
 	int width , height ;
-	char DDEstr [NUMVARS] [20] ;	
+	char DDEstr [NUMVARS] [20] ;
+	GdkWindow * gdk_window ;
+	GtkWidget * window ;
+	HWND hwnd ;
+	bool first ;
 	} WindowData ;
 	
 typedef	struct {
@@ -71,7 +76,6 @@ typedef struct {
 	ReadData buffer [ BUFFSIZE ] ;
 	char res[20];
 	} PanelData ;
-
 	
 #define Min(x,y)	(((x)>(y))?(y):(x))
 #define Max(x,y)	(((x)>(y))?(x):(y))
@@ -123,7 +127,7 @@ void defplotarea ( GtkWidget * window , int width , int height , int posh , int 
 void paintdirty ( GdkRectangle * dirty , PanelData * plotdata ) ;
 
 void totalize ( PanelData * plotdata ) ;
-int DDEInitiate() ;
-void DDETerminate() ;
-void readDDE ( PanelData * plotdata ) ;
 BOOL CALLBACK lpfn(HWND hWnd, int lParam) ;
+LRESULT CALLBACK WndProc (HWND wnd , UINT imsg , WPARAM wparam , LPARAM lparam ) ;
+void write_at ( cairo_t * cr , int x , int y , char * text ) ;
+void connectDDE ( PanelData * plotdata ) ;

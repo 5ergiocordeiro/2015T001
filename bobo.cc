@@ -8,14 +8,15 @@
 #include <omp.h>
 #include <windows.h>
 #include <dde.h>
-
+#include <gdk/gdkwin32.h>
 
 using namespace std;
 #include "mandelplot.h"
 #include "menubar.h"
 
 
-HWND Gclient , Gserver , Gexcel ;
+HWND Gclient , Gserver , Gexcel , Gthis , Gres ;
+WNDPROC Oldfn ;
 
 
 // Functions
@@ -26,7 +27,13 @@ int main ( int argc , char * argv [ ] ) {
 // progname
 
 	// Creates shared data struct
+	Gclient = Gserver = Gexcel = Gthis = Gres = NULL ;
+	Oldfn = NULL ;
 	WindowData original ;
+	original . first = true ;
+	original . gdk_window = NULL ;
+	original . window = NULL ;
+	original. hwnd = NULL ;
 	int wwidth = 500 , wheigth = 500 ;
 	initdata ( original , wwidth , wheigth ) ;
 	PanelData pdata ;
@@ -40,7 +47,8 @@ int main ( int argc , char * argv [ ] ) {
 	
 	// Creates window
 	GtkWidget * window = gtk_window_new ( GTK_WINDOW_TOPLEVEL ) ;
-	gtkinit ( window , "Totalização de vazão" , GTK_WIN_POS_NONE , wwidth , wheigth , "techsteel.ico" , & pdata ) ;
+	original . window = window ;
+	gtkinit ( window , "Totalizacao de vazao" , GTK_WIN_POS_NONE , wwidth , wheigth , "techsteel.ico" , & pdata ) ;
 
 	// Updates data
 	UpdateP ( & pdata ) ;
@@ -141,34 +149,132 @@ void UpdateP ( PanelData * plotdata ) {
 			plotdata -> total [ var ] . mes = 10 * var ;
 			sprintf ( plotdata -> total [ var ] . tag , "tag%d" , var ) ;
 			}
-		EnumWindows( (WNDENUMPROC) & lpfn, 0);
-/*
-		char app[] = "Excel";
-		char topic[] = "[dde.xls]Sheet1";
-		long res1 = SendMessage ( Gserver , WM_DDE_INITIATE , (WPARAM) Gclient , MAKELPARAM ( app , topic ) ) ;
-		long res2 = SendMessage ( Gexcel , WM_DDE_INITIATE , (WPARAM) Gclient , MAKELPARAM ( app , topic ) ) ;
-		sprintf(plotdata -> res , "%ld %ld %ld %ld" , (long) Gserver, (long) Gclient, res1, res2) ;
-*/
-		sprintf(plotdata -> res, "") ;
-		//SendMessage ( server , WM_DDE_POKE , client , MAKELPARAM ( app , topic ) ) ;		
+		// EnumWindows( (WNDENUMPROC) & lpfn, 0);
+		plotdata -> first = false ;
 		}
-	plotdata -> first = false ;
-	
-	readDDE ( plotdata ) ;
+
+	if ( Gres == NULL ) {
+		connectDDE ( plotdata ) ;
+		}
+
 	totalize ( plotdata ) ;
 	for ( var = 0 ; var < NUMVARS ; ++ var ) {
 		sprintf ( plotdata -> total [ var ] . cdia , "%d" , plotdata -> total [ var ] . dia ) ;
 		sprintf ( plotdata -> total [ var ] . cmes , "%d" , plotdata -> total [ var ] . mes ) ;
 		}
+
 	return;
 	}
+		
+void connectDDE ( PanelData * plotdata ) {
+	char app[] = "Excel";
+	char topic[] = "[dde.xls]Sheet1";
+	char * tag [] = {
+		"r1c1"
+		} ;
+/*
+	char app[] = "DMDE" ;
+	char topic[] = "DATA" ;
+*/
+	ATOM aapp = GlobalAddAtom (app) ;
+	ATOM atopic = GlobalAddAtom (topic) ;
+	long res = SendMessage ( (HWND) -1 , WM_DDE_INITIATE , (WPARAM) Gthis , MAKELPARAM ( aapp , atopic ) ) ;
+	cerr << "Enviou DDE_INITIATE" << app << "|" << topic << " res = " << res << "\n" ;
+	GlobalDeleteAtom (aapp) ;
+	GlobalDeleteAtom (atopic) ;
+	sprintf(plotdata -> res , "%ld %ld %ld %ld %ld %ld" , (long) Gserver, (long) Gexcel, (long) Gclient, (long) Gthis,
+		(long) res, (long) Gres);
+	ATOM atag = GlobalAddAtom (tag[0]) ;
+	res = PostMessage ( Gres , WM_DDE_REQUEST , (WPARAM) Gthis , PackDDElParam ( WM_DDE_REQUEST , CF_TEXT , atag ) ) ;
+	cerr << "Enviou DDE_REQUEST" << tag[0] << " res = " << res << "\n" ;
+	sprintf(plotdata -> res , "%ld %ld %ld %ld %ld %ld" , (long) Gserver, (long) Gexcel, (long) Gclient, (long) Gthis,
+		(long) res, (long) Gres);
+	GlobalDeleteAtom (atag) ;
 
+	GLOBALHANDLE hOptions = GlobalAlloc ( GMEM_MOVEABLE , sizeof(DDEADVISE) ) ;
+	if ( hOptions == NULL ) {
+		cerr << "Erro na alocação de memória\n" ;
+		return;
+		}
+	DDEADVISE  * lpOptions = (DDEADVISE FAR*) GlobalLock (hOptions) ; 
+	if ( lpOptions == NULL ) {
+		cerr << "Erro depois da alocação de memória\n" ;
+		GlobalFree(hOptions); 
+		return; 
+		} 
+	atag = GlobalAddAtom (tag[0]) ;
+	lpOptions -> cfFormat = CF_TEXT ; 
+	lpOptions -> fAckReq = TRUE ; 
+	lpOptions -> fDeferUpd = FALSE ; 
+	GlobalUnlock(hOptions); 
+	res = PostMessage( Gres, WM_DDE_ADVISE, (WPARAM) Gthis, PackDDElParam(WM_DDE_ADVISE, (UINT) hOptions, atag)) ;
+	cerr << "Enviou DDE_ADVISE" << tag[0] << " res = " << res << "\n" ;
+    GlobalFree(hOptions); 
+	GlobalDeleteAtom (atag) ;
+	cerr << "Passou ca \n" ;	
+	char * tst = "T" ;
+	size_t pcch = strlen(tst);
+	
+	hOptions = GlobalAlloc(GMEM_MOVEABLE, (LONG) sizeof(DDEPOKE) + pcch + 2) ;
+	if (hOptions == NULL)
+{
+		cerr << "Passou acola \n" ;	
+    return; 
+}
+	cerr << "Passou la \n" ;	
+ 	DDEPOKE  * lOptions ;
+if (!(lOptions = (DDEPOKE *) GlobalLock(hOptions))) 
+{ 
+    GlobalFree(hOptions); 
+    return; 
+} 
+ 
+lOptions->fRelease = TRUE; 
+lOptions->cfFormat = CF_TEXT;
+strcpy((LPSTR) lOptions->Value, (LPCSTR) tst); // copies value to be sent
+	cerr << "Passou aqui \n" ;
+ 
+// Each line of CF_TEXT data is terminated by CR/LF. 
+strcat((LPSTR) lOptions->Value, (LPCSTR) "\r\n");
+GlobalUnlock(hOptions);
+	cerr << "Passou ali \n" ;
+ATOM atomItem;
+if ((atomItem = GlobalAddAtom((LPSTR) tst)) != 0) 
+{ 
+ 
+        res = PostMessage(Gres, WM_DDE_POKE, (WPARAM) Gthis, PackDDElParam(WM_DDE_POKE, (UINT) hOptions, 
+                    atomItem));
+        GlobalDeleteAtom(atomItem); 
+        GlobalFree(hOptions); 
+        } 
+ 
+if (atomItem == 0) 
+{ 
+    // Handle errors. 
+} 
+	cerr << "Enviou DDE_POKE" << tag[0] << " res = " << res << "\n" ;
+	
+	}
+	
+LRESULT CALLBACK WndProc (HWND wnd , UINT imsg , WPARAM wparam , LPARAM lparam ) {
+	switch ( imsg ) {
+	case WM_DDE_ACK :
+		cerr << "ACK W = " << wparam << ", L = " << lparam << "\n" ;
+		Gres = (HWND) wparam ;
+	    FreeDDElParam ( WM_DDE_ACK , lparam ) ; 
+		break ;
+	case WM_DDE_DATA :
+		cerr << "DATA W = " << wparam << ", L = " << lparam << "\n" ;
+		break ;
+		}
+	return CallWindowProc ( Oldfn , wnd , imsg , wparam , lparam ) ;
+	}
+	
 BOOL CALLBACK lpfn( HWND hWnd, int lParam) {
 	char title [99];
 	int size ;
 	size = GetWindowText(hWnd, title, 100);
 	if(size > 0) {
-/*
 		if(strcmp(THIS_APP_NAME , title) == 0) {
 			Gclient = hWnd ;
 			cerr << title << ": " << hWnd << "\n" ;
@@ -181,7 +287,6 @@ BOOL CALLBACK lpfn( HWND hWnd, int lParam) {
 			Gexcel = hWnd ;
 			cerr << title << ": " << hWnd << "\n" ;
 			}
-*/
 		cerr << title << ": " << hWnd << "\n" ;
 		}
     return true;
@@ -362,34 +467,46 @@ gboolean userclkon ( GtkWidget * widget , GdkEvent * event , gpointer user_data 
 	return false ;
 	}
 
+void update_txt ( cairo_t * cr , PanelData * plotdata ) {
+	cairo_set_source_rgb ( cr , 0.1 , 0.1 , 0.1 ) ; 
+	cairo_select_font_face ( cr , "Purisa" , CAIRO_FONT_SLANT_NORMAL , CAIRO_FONT_WEIGHT_BOLD ) ;
+	cairo_set_font_size ( cr , 13 ) ;
+	write_at ( cr , 30 , 30 , (char *) "Tag" ) ;
+	write_at ( cr , 90 , 30 , (char *) "Dia" ) ;
+	write_at ( cr , 150 , 30 , (char *) "Mes" ) ;
+	SumData * result = plotdata -> total ;
+	for ( int var = 0 ; var < NUMVARS ; ++ var ) {
+		write_at ( cr , 30 , 30 * ( var + 2 ) , result [ var ] . tag ) ;  
+		write_at ( cr , 90 , 30 * ( var + 2 ) , result [ var ] . cdia ) ;  
+		write_at ( cr , 150 , 30 * ( var + 2 ) , result [ var ] . cmes ) ;
+		}
+	write_at ( cr , 30 , 350 , plotdata -> res ) ; 
+	}
+
 gboolean draw ( GtkWidget * widget , cairo_t * cr , gpointer user_data ) {
 // handles the "draw" event on the drawing areas.
   
 	PanelData * plotdata = ( PanelData * ) user_data ;
-	SumData * result = plotdata -> total ;
+	update_txt ( cr , plotdata ) ;
 
-	cairo_set_source_rgb(cr, 0.1, 0.1, 0.1); 
-	cairo_select_font_face(cr, "Purisa" , CAIRO_FONT_SLANT_NORMAL , CAIRO_FONT_WEIGHT_BOLD ) ;
-	cairo_set_font_size(cr, 13);
-
-	cairo_move_to ( cr , 30 , 30 ) ;
-	cairo_show_text ( cr , "Tag" ) ;
-	cairo_move_to ( cr , 90 , 30 ) ;
-	cairo_show_text ( cr , "Dia" ) ;
-	cairo_move_to ( cr , 150 , 30 ) ;
-	cairo_show_text ( cr , "Mes" ) ;
-	
-	int var ;
-	for ( var = 0 ; var < NUMVARS ; ++ var ) {
-		cairo_move_to ( cr , 30 , 30 * ( var + 2 ) ) ;
-		cairo_show_text ( cr , result [ var ] . tag ) ;  
-		cairo_move_to ( cr , 90 , 30 * ( var + 2 ) ) ;
-		cairo_show_text ( cr , result [ var ] . cdia ) ;  
-		cairo_move_to ( cr , 150 , 30 * ( var + 2 ) ) ;
-		cairo_show_text( cr , result [ var ] . cmes ) ;
+	if ( plotdata -> original -> first ) {
+		cerr << "gtk_window: " << plotdata -> original -> window << "\n" ;
+		GdkWindow * gdk_window = gtk_widget_get_window ( plotdata -> original -> window ) ;
+		cerr << "gdk_window: " << gdk_window << "\n" ;
+		if ( gdk_window != NULL ) {
+			gboolean b = gdk_win32_window_is_win32 ( gdk_window ) ;
+			cerr << "is win32: " << b << "\n" ;
+			HWND hwnd = ( HWND ) gdk_win32_window_get_handle ( gdk_window ) ;
+			cerr << "HWND: " << hwnd << "\n" ;
+			plotdata -> original -> hwnd = hwnd ;
+			Gthis = hwnd ;
+			Oldfn = (WNDPROC) GetWindowLong ( hwnd , GWL_WNDPROC ) ;
+			cerr << "Old proc: " << Oldfn << "\n" ;
+			SetWindowLong ( hwnd , GWL_WNDPROC , (LONG) WndProc ) ;
+			cerr << "New proc: " << WndProc << "\n" ;
+			plotdata -> original -> first = false ;
+			}
 		}
-	cairo_move_to ( cr , 30 , 350 ) ;
-	cairo_show_text ( cr , plotdata -> res ) ;  
 	return false;
 	}
 	
@@ -408,4 +525,7 @@ void act_tglMP ( GtkAction * action , gpointer user_data  ) {
 	return ;
 	}
 
-	
+void write_at ( cairo_t * cr , int x , int y , char * text ) {
+	cairo_move_to ( cr , x , y ) ;
+	cairo_show_text ( cr , text ) ;
+	}
