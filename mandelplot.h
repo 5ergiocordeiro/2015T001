@@ -21,19 +21,19 @@ const int NUMVARS = 9 ;
 const int BUFFSIZE = 1000 ;
 const int QUALITY_GOOD = 192 ;
 const char * TSERVER1_SERVER_NAME = "Microsoft Excel - dde.xls" ;
-const char * TSERVER2_SERVER_NAME = "Microsoft Excel - dde.xls" ;
+const char * TSERVER2_SERVER_NAME = "FIX DDE Server" ;
 const char * FIX32_SERVER_NAME = "FIX DDE Server" ;
 const char * EXCEL_SERVER_TYPE = "Excel" ;
 const char * FIX32_SERVER_TYPE = "Fix32" ;
 const char * EXCEL_APP = "Excel";
-const char * FIX32_APP = "DMDE";
+const char * FIX32_APP = "DMDDE";
 const char * TSERVER1_TOPIC = "[dde.xls]Sheet1";
-const char * TSERVER2_TOPIC = "[dde.xls]Sheet1";
+const char * TSERVER2_TOPIC = "DATA";
 const char * FIX32_TOPIC = "DATA";
 const int NUMSERVERS = 3;
 const UINT DDE_NACK = 0 ;
 const UINT DDE_ACK = 0x8000 ;
-
+const int MAX_STRSIZ = 30 ;
 
 // well-known, reserved colors
 const GdkRGBA ColorWhite = { 1 , 1 , 1 , 1 } ;
@@ -63,16 +63,16 @@ typedef	struct {
 	} PointData ;
 
 typedef struct {
-	char cdia [20] , cmes [20] ;
-	int dia, mes;
-	char tag [20] ;
+	char cdia [ MAX_STRSIZ ] , cmes [ MAX_STRSIZ ] , clast [ MAX_STRSIZ ] ;
+	float dia , mes , last ;
+	char tag [ MAX_STRSIZ ] ;
 	} SumData ;
 
 typedef struct {
-	char var [20] ;
-	char value [20] ;
+	char var [ MAX_STRSIZ ] ;
+	char value [ MAX_STRSIZ ] ;
 	int quality ;
-	char tstamp [20] ;
+	char tstamp [ MAX_STRSIZ ] ;
 	} ReadData ;
 	
 typedef struct {
@@ -81,7 +81,7 @@ typedef struct {
 	GtkWidget * msg , * draw [ MAXDRAWAREA ] ;
 	int num_areas , area_width [ MAXDRAWAREA ] ;
 	SumData total [ NUMVARS ] ;
-	char res[20];
+	char res[ MAX_STRSIZ ];
 	} PanelData ;
 
 typedef	struct {
