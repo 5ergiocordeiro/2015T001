@@ -31,6 +31,8 @@ const char * TSERVER1_TOPIC = "[dde.xls]Sheet1";
 const char * TSERVER2_TOPIC = "[dde.xls]Sheet1";
 const char * FIX32_TOPIC = "DATA";
 const int NUMSERVERS = 3;
+const UINT DDE_NACK = 0 ;
+const UINT DDE_ACK = 0x8000 ;
 
 
 // well-known, reserved colors
@@ -94,6 +96,7 @@ typedef struct {
 	int posr , posw ;
 	HWND client ;
 	WNDPROC Oldfn ;
+	int curvar ;
 	} GlobalData ;
 	
 	
@@ -151,6 +154,9 @@ BOOL CALLBACK lpfn(HWND hWnd, int lParam) ;
 LRESULT CALLBACK WndProc (HWND wnd , UINT imsg , WPARAM wparam , LPARAM lparam ) ;
 void write_at ( cairo_t * cr , int x , int y , char * text ) ;
 long connectDDE ( PanelData * plotdata , ServerData * pserver ) ;
-long listenDDE ( PanelData * plotdata , ServerData * pserver ) ;
+long listenDDE ( PanelData * plotdata , ServerData * pserver , int var ) ;
 void readDDE ( char * var , char * value ) ;
 int findvar ( const char * list[] , char * name ) ;
+void receiveACK ( HWND wnd , UINT imsg , WPARAM wparam , LPARAM lparam ) ;
+void receiveDATA ( HWND wnd , UINT imsg , WPARAM wparam , LPARAM lparam ) ;
+void sendACK ( HWND server , ATOM item , bool ack ) ;

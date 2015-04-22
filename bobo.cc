@@ -42,7 +42,7 @@ int main ( int argc , char * argv [ ] ) {
 	// Creates shared data struct
 	Gdata . client = NULL ;
 	Gdata . Oldfn = NULL ;
-	Gdata . posr = Gdata . posw = 0 ;
+	Gdata . posr = Gdata . posw = Gdata . curvar = 0 ;
 	WindowData original ;
 	original . first = true ;
 	original . gdk_window = NULL ;
@@ -53,7 +53,7 @@ int main ( int argc , char * argv [ ] ) {
 	PanelData pdata ;
 	pdata . first = true ;
 	pdata . original = & original ;
-	Pserver = & Gserver [1];
+	Pserver = & Gserver [2];
 	
 	// Initializes the GTK+ ttolkit
 	int dumbi = 1 ;
@@ -157,7 +157,7 @@ void UpdateP ( PanelData * plotdata ) {
 // Plots Mandelbrot set
 
 	int var ;
-	sprintf ( plotdata -> res , "" ) ;
+	sprintf ( plotdata -> res , " " ) ;
 	if ( plotdata -> first ) {
 		for ( var = 0 ; var < NUMVARS ; ++ var ) {
 			plotdata -> total [ var ] . dia = var ;
@@ -165,14 +165,16 @@ void UpdateP ( PanelData * plotdata ) {
 			sprintf ( plotdata -> total [ var ] . tag , "tag%d" , var ) ;
 			}
 		// EnumWindows( (WNDENUMPROC) & lpfn, 0);
+
 		plotdata -> first = false ;
 		}
 
 	if ( ( Gdata . client != NULL ) && ( Pserver -> hwnd == NULL ) ) {
 		int res = connectDDE ( plotdata , Pserver ) ;
 		}
-	if ( ( Pserver -> hwnd != NULL ) && ! Pserver -> enabled ) {
-		int res = listenDDE ( plotdata , Pserver ) ;
+	var = Gdata . curvar ;
+	if ( ( Pserver -> hwnd != NULL ) && ( var < NUMVARS ) ) {
+		int res = listenDDE ( plotdata , Pserver , var ) ;
 		Pserver -> enabled = true ;
 		}
 	totalize ( plotdata , Pserver ) ;
@@ -180,7 +182,6 @@ void UpdateP ( PanelData * plotdata ) {
 		sprintf ( plotdata -> total [ var ] . cdia , "%d" , plotdata -> total [ var ] . dia ) ;
 		sprintf ( plotdata -> total [ var ] . cmes , "%d" , plotdata -> total [ var ] . mes ) ;
 		}
-
 	return;
 	}
 		
@@ -196,7 +197,7 @@ long connectDDE ( PanelData * plotdata , ServerData * pserver ) {
 	return res ;
 	}
 
-long listenDDE ( PanelData * plotdata , ServerData * pserver ) {
+long listenDDE ( PanelData * plotdata , ServerData * pserver , int var ) {
 	// advise: to the server that answered the "initiate" message
 	GLOBALHANDLE hOptions = GlobalAlloc ( GMEM_MOVEABLE , sizeof(DDEADVISE) ) ;
 	if ( hOptions == NULL ) {
@@ -209,51 +210,95 @@ long listenDDE ( PanelData * plotdata , ServerData * pserver ) {
 		GlobalFree ( hOptions ) ; 
 		return -2; 
 		} 
-	for ( int i = 0 ; i < NUMVARS ; ++ i ) {
-		ATOM atag = GlobalAddAtom ( pserver -> tag [ i ] ) ;
-		lpOptions -> cfFormat = CF_TEXT ; 
-		lpOptions -> fAckReq = FALSE ; 
-		lpOptions -> fDeferUpd = FALSE ; 
-		GlobalUnlock ( hOptions ) ; 
-		long res = PostMessage ( pserver -> hwnd , WM_DDE_ADVISE , ( WPARAM ) Gdata . client ,
-			PackDDElParam ( WM_DDE_ADVISE , ( UINT ) hOptions , atag ) ) ;
-		cerr << "Enviou DDE_ADVISE" << pserver -> tag [ i ] << " res = " << res << "\n" ;
-		GlobalFree ( hOptions ) ; 
-		GlobalDeleteAtom ( atag ) ;
-		}
+	ATOM atag = GlobalAddAtom ( pserver -> tag [ var ] ) ;
+	lpOptions -> cfFormat = CF_TEXT ; 
+	lpOptions -> fAckReq = FALSE ; 
+	lpOptions -> fDeferUpd = FALSE ; 
+	GlobalUnlock ( hOptions ) ; 
+	long res = PostMessage ( pserver -> hwnd , WM_DDE_ADVISE , ( WPARAM ) Gdata . client ,
+		PackDDElParam ( WM_DDE_ADVISE , ( UINT ) hOptions , atag ) ) ;
+	cerr << "Enviou DDE_ADVISE" << pserver -> tag [ var ] << " res = " << res << "\n" ;
+	GlobalFree ( hOptions ) ; 
+	GlobalDeleteAtom ( atag ) ;
 	return 0 ;
 	}
 	
-LRESULT CALLBACK WndProc (HWND wnd , UINT imsg , WPARAM wparam , LPARAM lparam ) {
+LRESULT CALLBACK WndProc ( HWND wnd , UINT imsg , WPARAM wparam , LPARAM lparam ) {
 	switch ( imsg ) {
 	case WM_DDE_ACK :
-		cerr << "ACK W = " << wparam << ", L = " << lparam << "\n" ;
-		if ( Pserver -> hwnd == NULL ) {
-			Pserver -> hwnd = (HWND) wparam ;
-			FreeDDElParam ( WM_DDE_ACK , lparam ) ;
-			}
+		receiveACK ( wnd , imsg , wparam , lparam ) ;
 		break ;
 	case WM_DDE_DATA :
-		cerr << "DATA W = " << wparam << ", L = " << lparam ;
-		UINT low , high ;
-		UnpackDDElParam ( WM_DDE_DATA , lparam , & low, & high ) ;
-		FreeDDElParam (WM_DDE_DATA , lparam ) ;
-		GLOBALHANDLE hdata = ( GLOBALHANDLE ) low ;
-		DDEDATA * pdata = ( DDEDATA * ) GlobalLock ( hdata ) ;
-		ATOM aitem = ( ATOM ) high ;
-		cerr << " = " << high << ", " << low ;
-		char item [20] ;
-		if ( pdata -> cfFormat == CF_TEXT ) {
-			GlobalGetAtomName ( aitem , item , sizeof (item) ) ;
-			cerr << " : " << item << ", " << pdata -> Value << " @" << Gdata . posr << "\n" ;
-			readDDE ( item , ( char * ) pdata -> Value ) ;	
-			GlobalDeleteAtom ( aitem ) ;
-			}
-		GlobalUnlock ( hdata ) ;
-		GlobalFree ( hdata ) ;
+		receiveDATA ( wnd , imsg , wparam , lparam ) ;
 		break ;
 		}
 	return CallWindowProc ( Gdata . Oldfn , wnd , imsg , wparam , lparam ) ;
+	}
+		
+void receiveACK ( HWND wnd , UINT imsg , WPARAM wparam , LPARAM lparam ) {
+	cerr << "ACK W = " << wparam << ", L = " << lparam << "\n" ;		
+	UINT low , high ;
+	UnpackDDElParam ( WM_DDE_DATA , lparam , & low, & high ) ;
+	FreeDDElParam ( WM_DDE_DATA , lparam ) ;
+	if ( Pserver -> hwnd == NULL ) {
+		// ACK to WM_DDE_INITIATE
+		Pserver -> hwnd = (HWND) wparam ;
+		return ;
+		}
+	// ACK to WM_DDE_ADVISE
+	char msg [20] ;
+	bool ack = false ;
+	switch ( low ) {
+	case DDE_ACK :
+		strcpy( msg , "ACK" ) ;
+		ack = true ;
+		break ;
+	case DDE_NACK :
+		strcpy( msg , "ACK" ) ;
+		break ;
+	default :
+		itoa ( low , msg , 16 ) ;
+		}
+	cerr << msg << " high = " << high << ", low = " << low << "\n" ;		
+	if ( ack ) {
+		Gdata . curvar ++ ;
+		}
+	ATOM aitem = ( ATOM ) high ;
+	sendACK ( Pserver -> hwnd , aitem , true ) ;
+	}
+
+void receiveDATA ( HWND wnd , UINT imsg , WPARAM wparam , LPARAM lparam ) {
+	cerr << "DATA W = " << wparam << ", L = " << lparam ;
+	UINT low , high ;
+	UnpackDDElParam ( WM_DDE_DATA , lparam , & low, & high ) ;
+	FreeDDElParam (WM_DDE_DATA , lparam ) ;
+	GLOBALHANDLE hdata = ( GLOBALHANDLE ) low ;
+	DDEDATA FAR* pdata = ( DDEDATA FAR* ) GlobalLock ( hdata ) ;
+	ATOM aitem = ( ATOM ) high ;
+	cerr << " = " << high << ", " << low ;
+	char item [20] ;
+	if ( pdata -> cfFormat == CF_TEXT ) {
+		GlobalGetAtomName ( aitem , item , sizeof (item) ) ;
+		cerr << " : " << item << ", " << pdata -> Value << " @" << Gdata . posr << "\n" ;
+		readDDE ( item , ( char * ) pdata -> Value ) ;	
+		GlobalDeleteAtom ( aitem ) ;
+		if ( pdata -> fAckReq ) {
+			sendACK ( Pserver -> hwnd , aitem , true ) ;
+			}
+		}
+	else {
+		sendACK ( Pserver -> hwnd , aitem , false ) ;
+		}
+	bool release = pdata -> fRelease ;
+	GlobalUnlock ( hdata ) ;
+	if ( release ) {
+		GlobalFree ( hdata ) ;
+		}
+	}
+			
+void sendACK ( HWND server , ATOM item , bool ack ) {
+	PostMessage ( server , WM_DDE_ACK, (WPARAM) Gdata . client , PackDDElParam ( WM_DDE_ACK , DDE_ACK , item ) ) ;
+	cerr << "\t sent " << ( ack ? "ACK" : "NACK" ) << "\n" ;
 	}
 			
 void readDDE ( char * var , char * value ) {	
@@ -291,6 +336,7 @@ void totalize ( PanelData * plotdata , ServerData * pserver ) {
 	ReadData * buf = Gdata . buffer ;
 	float totals [ NUMVARS ] ;
 	int var ;
+
 	for ( var = 0 ; var < NUMVARS ; ++ var ) {
 		totals [ var ] = plotdata -> total [ var ] . dia ;
 		}
