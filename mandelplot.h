@@ -34,6 +34,12 @@ const int NUMSERVERS = 3;
 const UINT DDE_NACK = 0 ;
 const UINT DDE_ACK = 0x8000 ;
 const int MAX_STRSIZ = 30 ;
+const char * HDATAFILE = "%04d_dados.txt" ;
+const char * MDATAFILE = "%02d_dados.txt" ;
+const int DREC_SIZE = 100 ;
+const int PROC_INTERVAL = 10 ;
+const char * RECFMT = "%4d,%2d,%2d,%2d,%2d,%2d,%8.2f,%8.2f,%8.2f,%8.2f,%8.2f,%8.2f,%8.2f,%8.2f,%8.2f" ;
+
 
 // well-known, reserved colors
 const GdkRGBA ColorWhite = { 1 , 1 , 1 , 1 } ;
@@ -45,7 +51,7 @@ const GdkRGBA ColorBlack = { 0 , 0 , 0 , 1 } ;
 // Mouse modes
 typedef enum { MMODE_NONE , MMODE_CENTER , MMODE_PATH , MMODE_REGION } MMode ;
 typedef enum { PSERVER , TSERVER1 , TSERVER2 } TServer ;
-
+typedef enum {  FGETLAST_OK , FGETLAST_ERROPEN , FGETLAST_ERRSEEK , FGETLAST_ERRREAD } GetlastRes ;
 
 // Structs to storing data shared among functions
 typedef	struct {
@@ -64,7 +70,7 @@ typedef	struct {
 
 typedef struct {
 	char cdia [ MAX_STRSIZ ] , cmes [ MAX_STRSIZ ] , clast [ MAX_STRSIZ ] ;
-	float dia , mes , last ;
+	float dia , mes , last , ldia ;
 	char tag [ MAX_STRSIZ ] ;
 	} SumData ;
 
@@ -72,7 +78,7 @@ typedef struct {
 	char var [ MAX_STRSIZ ] ;
 	char value [ MAX_STRSIZ ] ;
 	int quality ;
-	char tstamp [ MAX_STRSIZ ] ;
+	time_t timestamp ;
 	} ReadData ;
 	
 typedef struct {
@@ -81,7 +87,8 @@ typedef struct {
 	GtkWidget * msg , * draw [ MAXDRAWAREA ] ;
 	int num_areas , area_width [ MAXDRAWAREA ] ;
 	SumData total [ NUMVARS ] ;
-	char res[ MAX_STRSIZ ];
+	char res[ MAX_STRSIZ ] , hfile [ MAX_STRSIZ ] , mfile [ MAX_STRSIZ ] ;
+	FILE * hdfile , * mdfile ;
 	} PanelData ;
 
 typedef	struct {
@@ -97,6 +104,7 @@ typedef struct {
 	HWND client ;
 	WNDPROC Oldfn ;
 	int curvar ;
+	time_t tlast ;
 	} GlobalData ;
 	
 	
@@ -155,8 +163,19 @@ LRESULT CALLBACK WndProc (HWND wnd , UINT imsg , WPARAM wparam , LPARAM lparam )
 void write_at ( cairo_t * cr , int x , int y , char * text ) ;
 long connectDDE ( PanelData * plotdata , ServerData * pserver ) ;
 long listenDDE ( PanelData * plotdata , ServerData * pserver , int var ) ;
-void readDDE ( char * var , char * value ) ;
+void readDDE ( char * var , char * value , time_t tstamp ) ;
 int findvar ( const char * list[] , char * name ) ;
 void receiveACK ( HWND wnd , UINT imsg , WPARAM wparam , LPARAM lparam ) ;
 void receiveDATA ( HWND wnd , UINT imsg , WPARAM wparam , LPARAM lparam ) ;
 void sendACK ( HWND server , ATOM item , bool ack ) ;
+void totald ( PanelData * plotdata , ServerData * pserver ) ;
+void totalm ( PanelData * plotdata , ServerData * pserver ) ;
+bool fexists ( char * fname ) ;
+void readData ( PanelData * plotdata ) ;
+FILE * openDatafile ( char * datafile , void * data , bool * rfail , void * dtime ) ;
+GetlastRes fgetlast ( char * fname , void * pdata , void * dtime ) ;
+static gboolean timeout ( PanelData * plotdata ) ;
+void writehrec () ;
+void writedrec () ;
+void changem () ;
+void checktfront ( bool * fronth , bool * frontd , bool * frontm ) ;

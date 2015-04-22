@@ -8,7 +8,9 @@
 #include <omp.h>
 #include <windows.h>
 #include <dde.h>
+// #include <glib.h>
 #include <gdk/gdkwin32.h>
+
 
 using namespace std;
 #include "mandelplot.h"
@@ -63,9 +65,14 @@ int main ( int argc , char * argv [ ] ) {
 	GtkWidget * window = gtk_window_new ( GTK_WINDOW_TOPLEVEL ) ;
 	original . window = window ;
 	gtkinit ( window , "Totalizacao de vazao" , GTK_WIN_POS_NONE , wwidth , wheigth , "techsteel.ico" , & pdata ) ;
+	
+	// Gets saved data
+	readData ( & pdata ) ;
 
 	// Updates data
 	UpdateP ( & pdata ) ;
+
+	g_timeout_add_seconds ( PROC_INTERVAL , ( GSourceFunc ) timeout , & pdata ) ;
 
 	// Shows window
 	// From this point on, control is driven by events and its handlers
@@ -152,9 +159,112 @@ void gtkinit ( GtkWidget * window , const char * title , GtkWindowPosition posit
 	return ;
 	}
 
+	
+bool fexists ( char * fname ) {
+	FILE * fp = fopen ( fname , "r" ) ;
+	if ( fp == NULL ) {
+		return false ;
+		}
+	fclose ( fp ) ;
+	return true ;
+	}
 
+
+void readData ( PanelData * plotdata ) {
+	
+	char data [2] [ NUMVARS ] [ MAX_STRSIZ ] ;
+	bool rfail1 , rfail2 ;
+	int ttime [2] [6] ;
+	sprintf ( plotdata -> hfile , HDATAFILE , 2015 ) ;
+	sprintf ( plotdata -> mfile , MDATAFILE , 4 ) ;	
+	FILE * fph = openDatafile ( plotdata -> hfile , ( void * ) data [0] , & rfail1 , ( void * ) ttime ) ;
+	plotdata -> hdfile = fph ;
+	FILE * fpm = openDatafile ( plotdata -> mfile , ( void * ) data [1] , & rfail2 , ( void * ) ttime ) ;
+	plotdata -> mdfile = fpm ;
+	int ind = ( ! rfail1 ) ? 0 : ( ( ! rfail2 ) ? 1 : -1 ) ;
+	if ( ind >= 0 ) {
+		for ( int var = 0 ; var < NUMVARS ; ++ var ) {
+			plotdata -> total [ var ] . last <- atof ( data [ ind ] [ var ] ) ;
+			}
+		struct tm tread ;
+		tread . tm_year = ttime [ ind ] [0] ;
+		tread . tm_mon = ttime [ ind ] [1] ;		
+		tread . tm_mday = ttime [ ind ] [2] ;
+		tread . tm_hour = ttime [ ind ] [3] ;
+		tread . tm_min = ttime [ ind ] [4] ;		
+		tread . tm_sec = ttime [ ind ] [5] ;
+		Gdata . tlast = mktime ( & tread ) ;
+		}
+	}
+		
+
+FILE * openDatafile ( char * datafile , void * data , bool * rfail , void * dtime ) {
+	* rfail = true ;
+	FILE * fp = NULL ;
+	if ( ! fexists ( datafile ) ) {
+		cerr << "Erro ao ler o arquivo de dados (" << datafile << ")\n" ;
+		}
+	else {
+		int res = fgetlast ( datafile , data , dtime ) ;
+		switch ( res ) {
+		case FGETLAST_OK :
+			* rfail = false ;
+			break ;
+		case FGETLAST_ERROPEN :
+			cerr << "Erro ao gravar o arquivo de dados (" << datafile << ")\n" ;
+			break ;
+		case FGETLAST_ERRSEEK :
+			cerr << "Erro ao procurar o registro no arquivo de dados (" << datafile << ")\n" ;
+			break ;
+		case FGETLAST_ERRREAD :
+			cerr << "Erro ao ler o registro no arquivo de dados (" << datafile << ")\n" ;
+			break ;
+			}
+		}
+	if ( rfail ) {
+		fp = fopen ( datafile , "w" ) ;
+		if ( fp == NULL ) {
+			cerr << "Erro ao tentar apagar o arquivo de dados (" << datafile << ")\n" ;
+			}
+		else {
+			cerr << "Aberto novo arquivo de dados (" << datafile << ")\n" ;
+			}
+		}
+	else {
+		fp = fopen ( datafile , "a" ) ;
+		if ( fp == NULL ) {
+			cerr << "Erro ao tentar gravar o arquivo de dados (" << datafile << ")\n" ;
+			}
+		}
+	return fp ;
+	}
+	
+GetlastRes fgetlast ( char * fname , void * pdata , void * dtime ) {
+	FILE * fp = fopen ( fname , "a+" ) ;
+	if ( fp == NULL ) {
+		return FGETLAST_ERROPEN ;
+		}
+	int res = fseek ( fp , - DREC_SIZE , SEEK_END ) ;
+	if ( res != 0 ) {
+		fclose ( fp ) ;
+		return FGETLAST_ERRSEEK ;
+		}
+	int * ptime = ( int * ) dtime ;
+	char * data = ( char * ) pdata ;
+	res = fscanf ( fp , RECFMT , 
+			ptime , ptime + 6 , ptime + 2 * 6 , ptime + 3 * 6 , ptime + 4 * 6 , ptime + 5 * 6 ,
+			data , data + MAX_STRSIZ , data + 2 * MAX_STRSIZ , data + 3 * MAX_STRSIZ , data + 4 * MAX_STRSIZ ,
+			data + 5 * MAX_STRSIZ , data + 6 * MAX_STRSIZ , data + 7 * MAX_STRSIZ , data + 8 * MAX_STRSIZ ) ;
+	if ( res != 13 ) {
+		fclose ( fp ) ;
+		return FGETLAST_ERRREAD ;
+		}
+	fclose ( fp ) ;
+	return FGETLAST_OK ;
+	}
+
+	
 void UpdateP ( PanelData * plotdata ) {
-// Plots Mandelbrot set
 
 	int var ;
 	sprintf ( plotdata -> res , " " ) ;
@@ -183,7 +293,52 @@ void UpdateP ( PanelData * plotdata ) {
 		sprintf ( plotdata -> total [ var ] . clast , "%8.2f" , plotdata -> total [ var ] . last ) ;
 		}
 	sprintf ( plotdata -> res , "%d %d" , Gdata . posr , Gdata . posw ) ;
+	
+	bool fronth , frontd , frontm ;
+	checktfront ( & fronth , & frontd , & frontm ) ;
+	if ( fronth ) {
+		writehrec ( ) ;
+		}
+	if ( frontd ) {
+		writedrec ( ) ;
+		}
+	if ( frontm ) {
+		changem ( ) ;
+		}
 	return ;
+	}
+	
+	
+void writehrec () {
+	cerr << "Gravou registro horário" << "\n" ;
+	}
+	
+
+void writedrec () {
+	cerr << "Gravou registro diario" << "\n" ;
+	}
+
+
+void changem () {
+	cerr << "Virou o mes" << "\n" ;
+	}
+
+	
+void checktfront ( bool * fronth , bool * frontd , bool * frontm ) {
+	time_t tnow ;
+	time ( & tnow ) ;
+	struct tm * timenow , * timelast ;
+	timenow = localtime ( & tnow ) ;
+	int hnow = timenow -> tm_hour ;
+	int dnow = timenow -> tm_mday ;
+	int mnow = timenow -> tm_mon ;
+	timelast = localtime ( & Gdata . tlast ) ;
+	int hlast = timelast -> tm_hour ;
+	int dlast = timelast -> tm_mday ;
+	int mlast = timelast -> tm_mon ;
+	* fronth = ( hlast != hnow ) ;
+	* frontd = ( dlast != dnow ) ;
+	* frontm = ( mlast != mnow ) ;	
 	}
 		
 long connectDDE ( PanelData * plotdata , ServerData * pserver ) {
@@ -270,6 +425,8 @@ void receiveACK ( HWND wnd , UINT imsg , WPARAM wparam , LPARAM lparam ) {
 	}
 
 void receiveDATA ( HWND wnd , UINT imsg , WPARAM wparam , LPARAM lparam ) {
+	time_t tnow ;
+	time ( & tnow ) ;
 	cerr << "DATA W = " << wparam << ", L = " << lparam ;
 	UINT low , high ;
 	UnpackDDElParam ( WM_DDE_DATA , lparam , & low, & high ) ;
@@ -288,7 +445,7 @@ void receiveDATA ( HWND wnd , UINT imsg , WPARAM wparam , LPARAM lparam ) {
 			* nl = '\0' ;
 			}
 		cerr << " : " << item << ", " << val << " @" << Gdata . posr << "\n" ;
-		readDDE ( item , val ) ;	
+		readDDE ( item , val , tnow ) ;	
 		GlobalDeleteAtom ( aitem ) ;
 		if ( pdata -> fAckReq ) {
 			sendACK ( Pserver -> hwnd , aitem , true ) ;
@@ -309,11 +466,12 @@ void sendACK ( HWND server , ATOM item , bool ack ) {
 	cerr << "\t sent " << ( ack ? "ACK" : "NACK" ) << "\n" ;
 	}
 			
-void readDDE ( char * var , char * value ) {	
+void readDDE ( char * var , char * value , time_t tstamp ) {	
 	ReadData * pbuf = & Gdata . buffer [ Gdata . posr ] ;
 	strcpy ( pbuf -> value , value ) ;
 	strcpy ( pbuf -> var , var ) ;
 	pbuf -> quality = QUALITY_GOOD ;
+	pbuf -> timestamp = tstamp ;
 	if ( ++ Gdata . posr >= BUFFSIZE ) {
 		Gdata . posr = 0 ;
 		}	
@@ -336,8 +494,12 @@ BOOL CALLBACK lpfn ( HWND hWnd , int lParam ) {
     return true;
 	}
 
-	
 void totalize ( PanelData * plotdata , ServerData * pserver ) {
+	totald ( plotdata , pserver ) ;
+	totalm ( plotdata , pserver ) ;
+	}
+	
+void totald ( PanelData * plotdata , ServerData * pserver ) {
 	int wpos = Gdata . posw ;
 	int rpos = Gdata . posr ;
 	ReadData * buf = Gdata . buffer ;
@@ -369,6 +531,14 @@ void totalize ( PanelData * plotdata , ServerData * pserver ) {
 	for ( var = 0 ; var < NUMVARS ; ++ var ) {
 		plotdata -> total [ var ] . dia = totals [ var ] ;
 		plotdata -> total [ var ] . last = last [ var ] ;
+		}
+	}
+	
+
+void totalm ( PanelData * plotdata , ServerData * pserver ) {
+	for ( int var = 0 ; var < NUMVARS ; ++ var ) {
+		SumData * ptot = plotdata -> total ;
+		ptot -> mes = ptot -> dia + ptot -> ldia ;
 		}
 	}
 	
@@ -563,21 +733,25 @@ gboolean draw ( GtkWidget * widget , cairo_t * cr , gpointer user_data ) {
 	return false;
 	}
 	
+	
 void plot ( const GtkWidget * button , gpointer frame ) {
 // Generates a plot with the new parameters
 
 	return ;
 	}
 
+	
 void act_mousesel ( GtkAction * action , GtkRadioAction * current , gpointer user_data ) {
 // Handles the event "new selection" in the Plot submenu
 	}
 
+	
 void act_tglMP ( GtkAction * action , gpointer user_data  ) {
 
 	return ;
 	}
 
+	
 int findvar ( const char * list[] , char * name ) {
 	for ( int i = 0 ; i < NUMVARS ; ++ i ) {
 		if ( strcmp ( list [i] , name ) == 0 ) {
@@ -587,7 +761,14 @@ int findvar ( const char * list[] , char * name ) {
 	return -1;
 	}
 	
+	
 void write_at ( cairo_t * cr , int x , int y , char * text ) {
 	cairo_move_to ( cr , x , y ) ;
 	cairo_show_text ( cr , text ) ;
+	}
+
+
+static gboolean timeout ( PanelData * plotdata ) {
+	UpdateP ( plotdata ) ;
+	return true ;
 	}
