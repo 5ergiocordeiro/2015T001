@@ -20,9 +20,17 @@ const int MAXDRAWAREA = 1 ;
 const int NUMVARS = 9 ;
 const int BUFFSIZE = 1000 ;
 const int QUALITY_GOOD = 192 ;
-const char * EXCEL_SERVER_NAME = "Microsoft Excel - dde.xls" ;
-const char * THIS_APP_NAME = "C:\\WINDOWS\\system32\\cmd.exe - a" ;
-const char * DDE_SERVER_NAME = "FIX DDE Server" ;
+const char * TSERVER1_SERVER_NAME = "Microsoft Excel - dde.xls" ;
+const char * TSERVER2_SERVER_NAME = "Microsoft Excel - dde.xls" ;
+const char * FIX32_SERVER_NAME = "FIX DDE Server" ;
+const char * EXCEL_SERVER_TYPE = "Excel" ;
+const char * FIX32_SERVER_TYPE = "Fix32" ;
+const char * EXCEL_APP = "Excel";
+const char * FIX32_APP = "DMDE";
+const char * TSERVER1_TOPIC = "[dde.xls]Sheet1";
+const char * TSERVER2_TOPIC = "[dde.xls]Sheet1";
+const char * FIX32_TOPIC = "DATA";
+const int NUMSERVERS = 3;
 
 
 // well-known, reserved colors
@@ -34,12 +42,12 @@ const GdkRGBA ColorBlack = { 0 , 0 , 0 , 1 } ;
 // Enumerations
 // Mouse modes
 typedef enum { MMODE_NONE , MMODE_CENTER , MMODE_PATH , MMODE_REGION } MMode ;
+typedef enum { PSERVER , TSERVER1 , TSERVER2 } TServer ;
 
 
 // Structs to storing data shared among functions
 typedef	struct {
 	int width , height ;
-	char DDEstr [NUMVARS] [20] ;
 	GdkWindow * gdk_window ;
 	GtkWidget * window ;
 	HWND hwnd ;
@@ -59,23 +67,35 @@ typedef struct {
 	} SumData ;
 
 typedef struct {
-	int var ;
-	float value ;
+	char var [20] ;
+	char value [20] ;
 	int quality ;
 	char tstamp [20] ;
 	} ReadData ;
-
 	
 typedef struct {
-	int rpos , wpos ;
 	bool first ;
 	WindowData * original ;
 	GtkWidget * msg , * draw [ MAXDRAWAREA ] ;
 	int num_areas , area_width [ MAXDRAWAREA ] ;
 	SumData total [ NUMVARS ] ;
-	ReadData buffer [ BUFFSIZE ] ;
 	char res[20];
 	} PanelData ;
+
+typedef	struct {
+	const char * name , * type ;
+	HWND hwnd ;
+	const char * app , * topic , * tag [ NUMVARS ] ;
+	bool enabled ;
+	} ServerData ;
+	
+typedef struct {
+	ReadData buffer [ BUFFSIZE ] ;
+	int posr , posw ;
+	HWND client ;
+	WNDPROC Oldfn ;
+	} GlobalData ;
+	
 	
 #define Min(x,y)	(((x)>(y))?(y):(x))
 #define Max(x,y)	(((x)>(y))?(x):(y))
@@ -126,8 +146,11 @@ float timeval_subtract ( struct timeval * result, struct timeval * x, struct tim
 void defplotarea ( GtkWidget * window , int width , int height , int posh , int posv , PanelData * plotdata ) ;
 void paintdirty ( GdkRectangle * dirty , PanelData * plotdata ) ;
 
-void totalize ( PanelData * plotdata ) ;
+void totalize ( PanelData * plotdata , ServerData * pserver ) ;
 BOOL CALLBACK lpfn(HWND hWnd, int lParam) ;
 LRESULT CALLBACK WndProc (HWND wnd , UINT imsg , WPARAM wparam , LPARAM lparam ) ;
 void write_at ( cairo_t * cr , int x , int y , char * text ) ;
-void connectDDE ( PanelData * plotdata ) ;
+long connectDDE ( PanelData * plotdata , ServerData * pserver ) ;
+long listenDDE ( PanelData * plotdata , ServerData * pserver ) ;
+void readDDE ( char * var , char * value ) ;
+int findvar ( const char * list[] , char * name ) ;

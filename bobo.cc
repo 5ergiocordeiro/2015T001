@@ -15,9 +15,22 @@ using namespace std;
 #include "menubar.h"
 
 
-HWND Gclient , Gserver , Gexcel , Gthis , Gres ;
-WNDPROC Oldfn ;
+GlobalData Gdata ;
 
+ServerData Gserver[NUMSERVERS] = {
+	// production environment
+	{ FIX32_SERVER_NAME , FIX32_SERVER_TYPE , NULL , FIX32_APP , FIX32_TOPIC ,
+		{ } , false } ,
+	// development environment
+	{ TSERVER1_SERVER_NAME , EXCEL_SERVER_TYPE , NULL , EXCEL_APP , TSERVER1_TOPIC , 
+		{ "r1c1" , "r2c1" , "r3c1" , "r4c1" , "r5c1" , "r6c1" , "r7c1" , "r8c1" , "r9c1" } , false } ,
+	// test environment
+	{ TSERVER2_SERVER_NAME , EXCEL_SERVER_TYPE , NULL , EXCEL_APP , TSERVER2_TOPIC , 
+		{ "r1c1" , "r2c1" , "r3c1" , "r4c1" , "r5c1" , "r6c1" , "r7c1" , "r8c1" , "r9c1" } , false } ,
+	} ;
+	
+ServerData * Pserver = NULL ;
+	
 
 // Functions
 int main ( int argc , char * argv [ ] ) {
@@ -27,8 +40,9 @@ int main ( int argc , char * argv [ ] ) {
 // progname
 
 	// Creates shared data struct
-	Gclient = Gserver = Gexcel = Gthis = Gres = NULL ;
-	Oldfn = NULL ;
+	Gdata . client = NULL ;
+	Gdata . Oldfn = NULL ;
+	Gdata . posr = Gdata . posw = 0 ;
 	WindowData original ;
 	original . first = true ;
 	original . gdk_window = NULL ;
@@ -39,7 +53,7 @@ int main ( int argc , char * argv [ ] ) {
 	PanelData pdata ;
 	pdata . first = true ;
 	pdata . original = & original ;
-	pdata . wpos = pdata . rpos = 0 ;
+	Pserver = & Gserver [1];
 	
 	// Initializes the GTK+ ttolkit
 	int dumbi = 1 ;
@@ -143,6 +157,7 @@ void UpdateP ( PanelData * plotdata ) {
 // Plots Mandelbrot set
 
 	int var ;
+	sprintf ( plotdata -> res , "" ) ;
 	if ( plotdata -> first ) {
 		for ( var = 0 ; var < NUMVARS ; ++ var ) {
 			plotdata -> total [ var ] . dia = var ;
@@ -153,11 +168,14 @@ void UpdateP ( PanelData * plotdata ) {
 		plotdata -> first = false ;
 		}
 
-	if ( Gres == NULL ) {
-		connectDDE ( plotdata ) ;
+	if ( ( Gdata . client != NULL ) && ( Pserver -> hwnd == NULL ) ) {
+		int res = connectDDE ( plotdata , Pserver ) ;
 		}
-
-	totalize ( plotdata ) ;
+	if ( ( Pserver -> hwnd != NULL ) && ! Pserver -> enabled ) {
+		int res = listenDDE ( plotdata , Pserver ) ;
+		Pserver -> enabled = true ;
+		}
+	totalize ( plotdata , Pserver ) ;
 	for ( var = 0 ; var < NUMVARS ; ++ var ) {
 		sprintf ( plotdata -> total [ var ] . cdia , "%d" , plotdata -> total [ var ] . dia ) ;
 		sprintf ( plotdata -> total [ var ] . cmes , "%d" , plotdata -> total [ var ] . mes ) ;
@@ -166,128 +184,99 @@ void UpdateP ( PanelData * plotdata ) {
 	return;
 	}
 		
-void connectDDE ( PanelData * plotdata ) {
-	char app[] = "Excel";
-	char topic[] = "[dde.xls]Sheet1";
-	char * tag [] = {
-		"r1c1"
-		} ;
-/*
-	char app[] = "DMDE" ;
-	char topic[] = "DATA" ;
-*/
-	ATOM aapp = GlobalAddAtom (app) ;
-	ATOM atopic = GlobalAddAtom (topic) ;
-	long res = SendMessage ( (HWND) -1 , WM_DDE_INITIATE , (WPARAM) Gthis , MAKELPARAM ( aapp , atopic ) ) ;
-	cerr << "Enviou DDE_INITIATE" << app << "|" << topic << " res = " << res << "\n" ;
+long connectDDE ( PanelData * plotdata , ServerData * pserver ) {
+	// initiate: broadcast
+	ATOM aapp = GlobalAddAtom ( pserver -> app) ;
+	ATOM atopic = GlobalAddAtom ( pserver -> topic ) ;
+	long res = SendMessage ( (HWND) -1 , WM_DDE_INITIATE , (WPARAM) Gdata . client , MAKELPARAM ( aapp , atopic ) ) ;
+	cerr << "Enviou DDE_INITIATE" << pserver -> app << "|" << pserver -> topic << " res = " << res << "\n" ;
 	GlobalDeleteAtom (aapp) ;
-	GlobalDeleteAtom (atopic) ;
-	sprintf(plotdata -> res , "%ld %ld %ld %ld %ld %ld" , (long) Gserver, (long) Gexcel, (long) Gclient, (long) Gthis,
-		(long) res, (long) Gres);
-	ATOM atag = GlobalAddAtom (tag[0]) ;
-	res = PostMessage ( Gres , WM_DDE_REQUEST , (WPARAM) Gthis , PackDDElParam ( WM_DDE_REQUEST , CF_TEXT , atag ) ) ;
-	cerr << "Enviou DDE_REQUEST" << tag[0] << " res = " << res << "\n" ;
-	sprintf(plotdata -> res , "%ld %ld %ld %ld %ld %ld" , (long) Gserver, (long) Gexcel, (long) Gclient, (long) Gthis,
-		(long) res, (long) Gres);
-	GlobalDeleteAtom (atag) ;
+	GlobalDeleteAtom (atopic) ;	
+	sprintf(plotdata -> res , "%ld %ld %ld" , (long) Gdata . client , (long) pserver -> hwnd , (long) res ) ;
+	return res ;
+	}
 
+long listenDDE ( PanelData * plotdata , ServerData * pserver ) {
+	// advise: to the server that answered the "initiate" message
 	GLOBALHANDLE hOptions = GlobalAlloc ( GMEM_MOVEABLE , sizeof(DDEADVISE) ) ;
 	if ( hOptions == NULL ) {
 		cerr << "Erro na alocação de memória\n" ;
-		return;
+		return -1;
 		}
-	DDEADVISE  * lpOptions = (DDEADVISE FAR*) GlobalLock (hOptions) ; 
+	DDEADVISE * lpOptions = (DDEADVISE FAR*) GlobalLock ( hOptions ) ; 
 	if ( lpOptions == NULL ) {
 		cerr << "Erro depois da alocação de memória\n" ;
-		GlobalFree(hOptions); 
-		return; 
+		GlobalFree ( hOptions ) ; 
+		return -2; 
 		} 
-	atag = GlobalAddAtom (tag[0]) ;
-	lpOptions -> cfFormat = CF_TEXT ; 
-	lpOptions -> fAckReq = TRUE ; 
-	lpOptions -> fDeferUpd = FALSE ; 
-	GlobalUnlock(hOptions); 
-	res = PostMessage( Gres, WM_DDE_ADVISE, (WPARAM) Gthis, PackDDElParam(WM_DDE_ADVISE, (UINT) hOptions, atag)) ;
-	cerr << "Enviou DDE_ADVISE" << tag[0] << " res = " << res << "\n" ;
-    GlobalFree(hOptions); 
-	GlobalDeleteAtom (atag) ;
-	cerr << "Passou ca \n" ;	
-	char * tst = "T" ;
-	size_t pcch = strlen(tst);
-	
-	hOptions = GlobalAlloc(GMEM_MOVEABLE, (LONG) sizeof(DDEPOKE) + pcch + 2) ;
-	if (hOptions == NULL)
-{
-		cerr << "Passou acola \n" ;	
-    return; 
-}
-	cerr << "Passou la \n" ;	
- 	DDEPOKE  * lOptions ;
-if (!(lOptions = (DDEPOKE *) GlobalLock(hOptions))) 
-{ 
-    GlobalFree(hOptions); 
-    return; 
-} 
- 
-lOptions->fRelease = TRUE; 
-lOptions->cfFormat = CF_TEXT;
-strcpy((LPSTR) lOptions->Value, (LPCSTR) tst); // copies value to be sent
-	cerr << "Passou aqui \n" ;
- 
-// Each line of CF_TEXT data is terminated by CR/LF. 
-strcat((LPSTR) lOptions->Value, (LPCSTR) "\r\n");
-GlobalUnlock(hOptions);
-	cerr << "Passou ali \n" ;
-ATOM atomItem;
-if ((atomItem = GlobalAddAtom((LPSTR) tst)) != 0) 
-{ 
- 
-        res = PostMessage(Gres, WM_DDE_POKE, (WPARAM) Gthis, PackDDElParam(WM_DDE_POKE, (UINT) hOptions, 
-                    atomItem));
-        GlobalDeleteAtom(atomItem); 
-        GlobalFree(hOptions); 
-        } 
- 
-if (atomItem == 0) 
-{ 
-    // Handle errors. 
-} 
-	cerr << "Enviou DDE_POKE" << tag[0] << " res = " << res << "\n" ;
-	
+	for ( int i = 0 ; i < NUMVARS ; ++ i ) {
+		ATOM atag = GlobalAddAtom ( pserver -> tag [ i ] ) ;
+		lpOptions -> cfFormat = CF_TEXT ; 
+		lpOptions -> fAckReq = FALSE ; 
+		lpOptions -> fDeferUpd = FALSE ; 
+		GlobalUnlock ( hOptions ) ; 
+		long res = PostMessage ( pserver -> hwnd , WM_DDE_ADVISE , ( WPARAM ) Gdata . client ,
+			PackDDElParam ( WM_DDE_ADVISE , ( UINT ) hOptions , atag ) ) ;
+		cerr << "Enviou DDE_ADVISE" << pserver -> tag [ i ] << " res = " << res << "\n" ;
+		GlobalFree ( hOptions ) ; 
+		GlobalDeleteAtom ( atag ) ;
+		}
+	return 0 ;
 	}
 	
 LRESULT CALLBACK WndProc (HWND wnd , UINT imsg , WPARAM wparam , LPARAM lparam ) {
 	switch ( imsg ) {
 	case WM_DDE_ACK :
 		cerr << "ACK W = " << wparam << ", L = " << lparam << "\n" ;
-		Gres = (HWND) wparam ;
-	    FreeDDElParam ( WM_DDE_ACK , lparam ) ; 
+		if ( Pserver -> hwnd == NULL ) {
+			Pserver -> hwnd = (HWND) wparam ;
+			FreeDDElParam ( WM_DDE_ACK , lparam ) ;
+			}
 		break ;
 	case WM_DDE_DATA :
-		cerr << "DATA W = " << wparam << ", L = " << lparam << "\n" ;
+		cerr << "DATA W = " << wparam << ", L = " << lparam ;
+		UINT low , high ;
+		UnpackDDElParam ( WM_DDE_DATA , lparam , & low, & high ) ;
+		FreeDDElParam (WM_DDE_DATA , lparam ) ;
+		GLOBALHANDLE hdata = ( GLOBALHANDLE ) low ;
+		DDEDATA * pdata = ( DDEDATA * ) GlobalLock ( hdata ) ;
+		ATOM aitem = ( ATOM ) high ;
+		cerr << " = " << high << ", " << low ;
+		char item [20] ;
+		if ( pdata -> cfFormat == CF_TEXT ) {
+			GlobalGetAtomName ( aitem , item , sizeof (item) ) ;
+			cerr << " : " << item << ", " << pdata -> Value << " @" << Gdata . posr << "\n" ;
+			readDDE ( item , ( char * ) pdata -> Value ) ;	
+			GlobalDeleteAtom ( aitem ) ;
+			}
+		GlobalUnlock ( hdata ) ;
+		GlobalFree ( hdata ) ;
 		break ;
 		}
-	return CallWindowProc ( Oldfn , wnd , imsg , wparam , lparam ) ;
+	return CallWindowProc ( Gdata . Oldfn , wnd , imsg , wparam , lparam ) ;
+	}
+			
+void readDDE ( char * var , char * value ) {	
+	ReadData * pbuf = & Gdata . buffer [ Gdata . posr ] ;
+	strcpy ( pbuf -> value , value ) ;
+	strcpy ( pbuf -> var , var ) ;
+	pbuf -> quality = QUALITY_GOOD ;
+	if ( ++ Gdata . posr >= BUFFSIZE ) {
+		Gdata . posr = 0 ;
+		}	
 	}
 	
-BOOL CALLBACK lpfn( HWND hWnd, int lParam) {
-	char title [99];
+BOOL CALLBACK lpfn ( HWND hWnd , int lParam ) {
+	char title [99] ;
 	int size ;
-	size = GetWindowText(hWnd, title, 100);
-	if(size > 0) {
-		if(strcmp(THIS_APP_NAME , title) == 0) {
-			Gclient = hWnd ;
+	size = GetWindowText ( hWnd , title , 100 ) ;
+	const char * name = Pserver -> name ;
+	if ( size > 0 ) {
+		if ( strcmp ( name , title ) == 0 ) {
+			Pserver -> hwnd = hWnd ;
 			cerr << title << ": " << hWnd << "\n" ;
 			}
-		if(strcmp(DDE_SERVER_NAME, title) == 0) {
-			Gserver = hWnd ;
-			cerr << title << ": " << hWnd << "\n" ;
-			}
-		if(strcmp(EXCEL_SERVER_NAME, title) == 0) {
-			Gexcel = hWnd ;
-			cerr << title << ": " << hWnd << "\n" ;
-			}
-		cerr << title << ": " << hWnd << "\n" ;
+		// cerr << title << ": " << hWnd << "\n" ;
 		}
     return true;
 	}
@@ -296,10 +285,10 @@ void readDDE ( PanelData * plotdata ) {
 	
 	}
 	
-void totalize ( PanelData * plotdata ) {
-	int wpos = plotdata -> wpos ;
-	int rpos = plotdata -> rpos ;
-	ReadData * buf ;
+void totalize ( PanelData * plotdata , ServerData * pserver ) {
+	int wpos = Gdata . posw ;
+	int rpos = Gdata . posr ;
+	ReadData * buf = Gdata . buffer ;
 	float totals [ NUMVARS ] ;
 	int var ;
 	for ( var = 0 ; var < NUMVARS ; ++ var ) {
@@ -307,15 +296,17 @@ void totalize ( PanelData * plotdata ) {
 		}
 	int i = wpos ;
 	while ( i != rpos ) {
-		int qual = buf [ i ] . quality ;
-		if ( qual == QUALITY_GOOD ) {
-			var = buf [ i ] . var ;
-			totals [ var ] = totals [ var ] + buf [ i ] . value ;
+		if ( buf [ i ] . quality == QUALITY_GOOD ) {
+			var = findvar ( pserver -> tag , buf [ i ] . var ) ;
+			if ( var > 0 ) {
+				totals [ var ] = totals [ var ] + atof ( buf [ i ] . value ) ;
+				}
 			}
-		if ( ++ i > BUFFSIZE ) {
+		if ( ++ i >= BUFFSIZE ) {
 			i = 0 ;
 			}
 		}
+	Gdata . posw = i ;
 	for ( var = 0 ; var < NUMVARS ; ++ var ) {
 		plotdata -> total [ var ] . dia = totals [ var ] ;
 		}
@@ -499,9 +490,9 @@ gboolean draw ( GtkWidget * widget , cairo_t * cr , gpointer user_data ) {
 			HWND hwnd = ( HWND ) gdk_win32_window_get_handle ( gdk_window ) ;
 			cerr << "HWND: " << hwnd << "\n" ;
 			plotdata -> original -> hwnd = hwnd ;
-			Gthis = hwnd ;
-			Oldfn = (WNDPROC) GetWindowLong ( hwnd , GWL_WNDPROC ) ;
-			cerr << "Old proc: " << Oldfn << "\n" ;
+			Gdata . client = hwnd ;
+			Gdata . Oldfn = (WNDPROC) GetWindowLong ( hwnd , GWL_WNDPROC ) ;
+			cerr << "Old proc: " << Gdata . Oldfn << "\n" ;
 			SetWindowLong ( hwnd , GWL_WNDPROC , (LONG) WndProc ) ;
 			cerr << "New proc: " << WndProc << "\n" ;
 			plotdata -> original -> first = false ;
@@ -525,6 +516,15 @@ void act_tglMP ( GtkAction * action , gpointer user_data  ) {
 	return ;
 	}
 
+int findvar ( const char * list[] , char * name ) {
+	for ( int i = 0 ; i < NUMVARS ; ++ i ) {
+		if ( strcmp ( list [i] , name ) == 0 ) {
+			return i ;
+			}
+		}
+	return -1;
+	}
+	
 void write_at ( cairo_t * cr , int x , int y , char * text ) {
 	cairo_move_to ( cr , x , y ) ;
 	cairo_show_text ( cr , text ) ;
