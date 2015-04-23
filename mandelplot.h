@@ -38,6 +38,8 @@ const char * HDATAFILE = "%04d_dados.txt" ;
 const char * MDATAFILE = "%02d_dados.txt" ;
 const int DREC_SIZE = 100 ;
 const int PROC_INTERVAL = 10 ;
+const int PROC_SINTERVAL = 1 ;
+const int PROC_LINTERVAL = 100 ;
 const char * RECFMT = "%4d,%2d,%2d,%2d,%2d,%2d,%8.2f,%8.2f,%8.2f,%8.2f,%8.2f,%8.2f,%8.2f,%8.2f,%8.2f" ;
 
 
@@ -69,20 +71,21 @@ typedef	struct {
 	} PointData ;
 
 typedef struct {
-	char cdia [ MAX_STRSIZ ] , cmes [ MAX_STRSIZ ] , clast [ MAX_STRSIZ ] ;
-	float dia , mes , last , ldia ;
+	char chora [ MAX_STRSIZ ] , cdia [ MAX_STRSIZ ] , cmes [ MAX_STRSIZ ] ,
+		clastval [ MAX_STRSIZ ] , clasttime [ MAX_STRSIZ ] ;
+	float hora , dia , mes , last , lastval ;
 	char tag [ MAX_STRSIZ ] ;
+	struct timeval lastt ;
 	} SumData ;
 
 typedef struct {
 	char var [ MAX_STRSIZ ] ;
 	char value [ MAX_STRSIZ ] ;
 	int quality ;
-	time_t timestamp ;
+	struct timeval timestamp ;
 	} ReadData ;
 	
 typedef struct {
-	bool first ;
 	WindowData * original ;
 	GtkWidget * msg , * draw [ MAXDRAWAREA ] ;
 	int num_areas , area_width [ MAXDRAWAREA ] ;
@@ -140,7 +143,6 @@ GtkWidget * defmenubar ( GtkWidget * window , GtkWidget * mainframe , PanelData 
 void initdata ( WindowData & plotdata , int & width , int & height ) ;
 GdkPixbuf * create_pixbuf ( const gchar * filename ) ;
 // Problem-domain functions
-void UpdateP ( PanelData * plotdata ) ;
 void RenderVM ( GdkRGBA * vbuf , int image_size , int effective_iter , vector <int> & niter , int h , double sat , bool showMP , int nMP ) ;
 void RenderM (int image_size, int effective_iter, vector <int> & niter, int hue, double saturation, bool showMP, int nMP , PanelData * vbuf ) ;
 int ComputeM ( int image_size, float real_start , float real_end , float imag_start , float imag_end, int max_iters, vector <int> & buffer,vector <int> & ziter, bool showMP, int & nMP) ;
@@ -152,12 +154,17 @@ void put_pixel ( GdkRGBA * vbuf , int x , int y , double red , double green , do
 void cleardirty ( GdkRectangle * dirty , GdkRGBA * vbuf , GdkRGBA * wbuf , int width , GtkWidget * window ) ;
 void markpoint ( int i , int j , GdkRGBA * wbuf , int width , int height , GdkRectangle * dirty ) ;
 void markregion ( PointData * region , GdkRGBA * wbuf , int width , GdkRectangle * dirty ) ;
-
-float timeval_subtract ( struct timeval * result, struct timeval * x, struct timeval * y ) ;
-void defplotarea ( GtkWidget * window , int width , int height , int posh , int posv , PanelData * plotdata ) ;
 void paintdirty ( GdkRectangle * dirty , PanelData * plotdata ) ;
 
-void totalize ( PanelData * plotdata , ServerData * pserver ) ;
+float timeval_subtract ( struct timeval * x, struct timeval * y ) ;
+void defplotarea ( GtkWidget * window , int width , int height , int posh , int posv , PanelData * plotdata ) ;
+
+void UpdateP ( PanelData * plotdata ) ;
+void InitP ( PanelData * plotdata ) ;
+void UpdateS ( PanelData * plotdata ) ;
+void InitDDE ( PanelData * plotdata ) ;
+void totalize ( int var , float val ) ;
+void procbuf ( PanelData * plotdata , ServerData * pserver ) ;
 BOOL CALLBACK lpfn(HWND hWnd, int lParam) ;
 LRESULT CALLBACK WndProc (HWND wnd , UINT imsg , WPARAM wparam , LPARAM lparam ) ;
 void write_at ( cairo_t * cr , int x , int y , char * text ) ;
@@ -168,14 +175,17 @@ int findvar ( const char * list[] , char * name ) ;
 void receiveACK ( HWND wnd , UINT imsg , WPARAM wparam , LPARAM lparam ) ;
 void receiveDATA ( HWND wnd , UINT imsg , WPARAM wparam , LPARAM lparam ) ;
 void sendACK ( HWND server , ATOM item , bool ack ) ;
-void totald ( PanelData * plotdata , ServerData * pserver ) ;
-void totalm ( PanelData * plotdata , ServerData * pserver ) ;
 bool fexists ( char * fname ) ;
 void readData ( PanelData * plotdata ) ;
 FILE * openDatafile ( char * datafile , void * data , bool * rfail , void * dtime ) ;
 GetlastRes fgetlast ( char * fname , void * pdata , void * dtime ) ;
 static gboolean timeout ( PanelData * plotdata ) ;
-void writehrec () ;
-void writedrec () ;
-void changem () ;
+static gboolean ltimeout ( PanelData * plotdata ) ;
+static gboolean stimeout ( PanelData * plotdata ) ;
+void changem ( PanelData * plotdata ) ;
+void changed ( PanelData * plotdata ) ;
+void changeh ( PanelData * plotdata ) ;
 void checktfront ( bool * fronth , bool * frontd , bool * frontm ) ;
+void readDDE ( char * var , char * value , struct timeval tstamp ) ;
+void totalize ( PanelData * plotdata , int var , float val ) ;
+void procvar ( PanelData * plotdata , int var , float value , struct timeval * ptime ) ;
