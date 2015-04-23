@@ -80,7 +80,7 @@ typedef struct {
 	} SumData ;
 
 typedef struct {
-	char var [ MAX_STRSIZ ] ;
+	int var ;
 	char value [ MAX_STRSIZ ] ;
 	int quality ;
 	time_t timestamp ;
@@ -109,7 +109,7 @@ typedef struct {
 	WNDPROC Oldfn ;
 	int curvar ;
 	time_t tlast ;
-	bool torequest [ NUMVARS ] , tolisten [ NUMVARS ] ;
+	bool torequest [ NUMVARS ] , tolisten [ NUMVARS ] , tounlisten [ NUMVARS ] ;
 	} GlobalData ;
 	
 	
@@ -172,6 +172,7 @@ LRESULT CALLBACK WndProc (HWND wnd , UINT imsg , WPARAM wparam , LPARAM lparam )
 void write_at ( cairo_t * cr , int x , int y , char * text ) ;
 long connectDDE ( PanelData * plotdata , ServerData * pserver ) ;
 long listenDDE ( PanelData * plotdata , ServerData * pserver , int var ) ;
+long unlistenDDE ( PanelData * plotdata , ServerData * pserver , int var ) ;
 long connectDDE ( PanelData * plotdata , ServerData * pserver , int var ) ;
 void readDDE ( char * var , char * value , time_t tstamp ) ;
 int findvar ( const char * list[] , char * name ) ;

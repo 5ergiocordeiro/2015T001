@@ -50,7 +50,7 @@ int main ( int argc , char * argv [ ] ) {
 	// Inicializa as variáveis globais
 	Gdata . client = NULL ;
 	Gdata . Oldfn = NULL ;
-	Gdata . posr = Gdata . posw = Gdata . curvar = 0 ;
+	Gdata . posr = Gdata . posw = Gdata . curvar = 0 ;           
 	WindowData original ;
 	original . first = true ;
 	original . gdk_window = NULL ;
@@ -296,6 +296,8 @@ void InitP ( PanelData * plotdata ) {
 			plotdata -> total [ var ] . hora = plotdata -> total [ var ] . last = 0 ;
 		plotdata -> total [ var ] . lastval = -1 ;
 		Gdata . torequest [ var ] = true ;
+		Gdata . tounlisten [ var ] = false ;
+		Gdata . tolisten [ var ] = true ;
 		sprintf ( plotdata -> total [ var ] . tag , "tag%d" , var ) ;
 		}
 	// EnumWindows( (WNDENUMPROC) & lpfn, 0);
@@ -303,27 +305,40 @@ void InitP ( PanelData * plotdata ) {
 
 
 void InitDDE ( PanelData * plotdata ) {
-// Atualiza os dados
+// Gerencia a conexão com o servidor DDE
 
 	// Estabelece conexão via DDE
-	if ( ( Gdata . client != NULL ) && ( Pserver -> hwnd == NULL ) ) {
-		sprintf ( plotdata -> res , "Conectando com o servidor..." ) ;
-		connectDDE ( plotdata , Pserver ) ;
-		}
-	int var = Gdata . curvar ;
-	// Solicita as variáveis, uma de cada vez
-	if ( ( Pserver -> hwnd != NULL ) && ( var < NUMVARS ) ) {
-		sprintf ( plotdata -> res , "Registrando-se para receber atualizacoes..." ) ;
-		listenDDE ( plotdata , Pserver , var ) ;
-		Pserver -> enabled = true ;
-		}
-	if ( var < NUMVARS ) {
+	if ( Gdata . client == NULL ) {
 		return ;
 		}
-	for ( var = 0 ; var < NUMVARS ; ++ var ) {
+	if ( Pserver -> hwnd == NULL ) {
+		sprintf ( plotdata -> res , "Conectando com o servidor..." ) ;
+		connectDDE ( plotdata , Pserver ) ;
+		return ;
+		}
+	// Lê os dados diretamente
+	for ( int var = 0 ; var < NUMVARS ; ++ var ) {
+		if ( Gdata . tounlisten [ var ] ) {
+			Gdata . tounlisten [ var ] = false ;
+			Gdata . torequest [ var ] = true ;
+			unlistenDDE ( plotdata , Pserver , var ) ;
+			return ;
+			}
+		}
+	for ( int var = 0 ; var < NUMVARS ; ++ var ) {
 		if ( Gdata . torequest [ var ] ) {
 			sprintf ( plotdata -> res , "Atualizando variavel %d..." , var ) ;
+			Gdata . curvar = var ;
+			Gdata . tolisten [ var ] = true ;
 			requestDDE ( plotdata , Pserver , var ) ;
+			return ;
+			}
+		}
+	for ( int var = 0 ; var < NUMVARS ; ++ var ) {
+		if ( Gdata . tolisten [ var ] ) {
+			sprintf ( plotdata -> res , "Registrando-se para receber atualizacoes da variavel %d..." , var ) ;
+			Gdata . curvar = var ;
+			listenDDE ( plotdata , Pserver , var ) ;
 			return ;
 			}
 		}
@@ -381,7 +396,7 @@ void UpdateL ( PanelData * plotdata ) {
 		time_t tnow ;
 		time ( & tnow ) ;
 		double interval = difftime_( tnow , lastt ) ;
-		Gdata . torequest [ var ] = ( interval > REQUEST_INTERVAL ) ;
+		Gdata . tounlisten [ var ] = ( interval > REQUEST_INTERVAL ) ;
 		}
 	}
 
@@ -531,6 +546,18 @@ long requestDDE ( PanelData * plotdata , ServerData * pserver , int var ) {
 	}
 
 	
+long unlistenDDE ( PanelData * plotdata , ServerData * pserver , int var ) {
+// Avisa ao servidor DDE para não mais enviar dados por exceção
+
+	ATOM atag = GlobalAddAtom ( pserver -> tag [ var ] ) ;
+	long res = PostMessage ( pserver -> hwnd , WM_DDE_UNADVISE , ( WPARAM ) Gdata . client ,
+		PackDDElParam ( WM_DDE_UNADVISE , 0 , atag ) ) ;
+	cerr << "Enviou DDE_UNADVISE " << pserver -> tag [ var ] << " res = " << res << "\n" ;
+	GlobalDeleteAtom ( atag ) ;
+	return res ;
+	}
+	
+
 LRESULT CALLBACK WndProc ( HWND wnd , UINT imsg , WPARAM wparam , LPARAM lparam ) {
 // Processa as mensagens recebidas
 
@@ -575,9 +602,8 @@ void receiveACK ( HWND wnd , UINT imsg , WPARAM wparam , LPARAM lparam ) {
 		itoa ( low , msg , 16 ) ;
 		}
 	cerr << " " << msg << " high = " << high << ", low = " << low << "\n" ;
-	// Já pode pedir para receber mais uma variável
 	if ( ack ) {
-		Gdata . curvar ++ ;
+		Gdata . tolisten [ Gdata . curvar ] = false ;
 		}
 	// Envia ACK ao servidor DDE
 	ATOM aitem = ( ATOM ) high ;
@@ -608,7 +634,7 @@ void receiveDATA ( HWND wnd , UINT imsg , WPARAM wparam , LPARAM lparam ) {
 		if ( nl != NULL ) {
 			* nl = '\0' ;
 			}
-		cerr << " : " << item << ", " << val << " @" << Gdata . posr << "\n" ;
+		cerr << " : " << item << ", " << val << " @" << Gdata . posr ;
 		readDDE ( item , val , tnow ) ;	
 		GlobalDeleteAtom ( aitem ) ;
 		// Envia ACK ao servidor DDE
@@ -639,12 +665,13 @@ void readDDE ( char * var , char * value , time_t tstamp ) {
 // Armazena os dados recebidos do servidor DDE
 	int nvar = findvar ( Pserver -> tag , var ) ;
 	if ( nvar < 0 ) {
-		return ;
+		nvar = Gdata . curvar ;
 		}
+	cerr << " var " << nvar << "\n" ; 
 	Gdata . torequest [ nvar ] = false ;
 	ReadData * pbuf = & Gdata . buffer [ Gdata . posr ] ;
 	strcpy ( pbuf -> value , value ) ;
-	strcpy ( pbuf -> var , var ) ;
+	pbuf -> var = nvar ;
 	pbuf -> quality = QUALITY_GOOD ;
 	pbuf -> timestamp = tstamp ;
 	if ( ++ Gdata . posr >= BUFFSIZE ) {
@@ -694,7 +721,7 @@ void procbuf ( PanelData * plotdata , ServerData * pserver ) {
 	while ( i != rpos ) {
 		// Obtém um valor lido
 		if ( buf [ i ] . quality == QUALITY_GOOD ) {
-			int var = findvar ( pserver -> tag , buf [ i ] . var ) ;
+			int var = buf [ i ] . var ;
 			if ( var >= 0 ) {
 				char * val = buf [ i ] . value ;
 				value = atof ( val ) ;
