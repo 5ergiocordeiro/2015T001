@@ -15,6 +15,8 @@ using namespace std;
 #include "menubar.h"
 
 
+#define difftime_( a , b )			( ( a ) - ( b ) )			// a função difftime tem um bug
+
 
 // Dados globais
 // Esses dados precisam estar disponíveis para as funções de callback
@@ -96,7 +98,6 @@ void defwindow ( GtkWidget * window , const char * title , GtkWindowPosition pos
 	gtk_window_set_default_size ( GTK_WINDOW ( window ) , width , height ) ;
 	gtk_window_set_position ( GTK_WINDOW ( window ) , position ) ;
 	gtk_window_set_icon ( GTK_WINDOW ( window ) , create_pixbuf ( filename ) ) ;
-	return ;
 	}
 
 
@@ -162,7 +163,6 @@ void gtkinit ( GtkWidget * window , const char * title , GtkWindowPosition posit
 	g_signal_connect ( zoominbtn , "clicked" , G_CALLBACK ( zoomin ) , plotdata ) ;
 	GtkWidget * zoomoutbtn = defbutton ( ctrlbar , "Zoom out" , SEPARATION , 3 * ( SEPARATION + BUTTONHEIGHT ) ) ;
 	g_signal_connect ( zoomoutbtn , "clicked" , G_CALLBACK ( zoomout ) , plotdata ) ;
-	return ;
 	}
 
 	
@@ -290,11 +290,12 @@ GetlastRes fgetlast ( char * fname , void * pdata , void * dtime ) {
 	
 void InitP ( PanelData * plotdata ) {
 // Primeira atualização
-	sprintf ( plotdata -> res , " " ) ;
+	sprintf ( plotdata -> res , "" ) ;
 	for ( int var = 0 ; var < NUMVARS ; ++ var ) {
 		plotdata -> total [ var ] . dia = plotdata -> total [ var ] . mes =
 			plotdata -> total [ var ] . hora = plotdata -> total [ var ] . last = 0 ;
 		plotdata -> total [ var ] . lastval = -1 ;
+		Gdata . torequest [ var ] = true ;
 		sprintf ( plotdata -> total [ var ] . tag , "tag%d" , var ) ;
 		}
 	// EnumWindows( (WNDENUMPROC) & lpfn, 0);
@@ -306,14 +307,27 @@ void InitDDE ( PanelData * plotdata ) {
 
 	// Estabelece conexão via DDE
 	if ( ( Gdata . client != NULL ) && ( Pserver -> hwnd == NULL ) ) {
-		int res = connectDDE ( plotdata , Pserver ) ;
+		sprintf ( plotdata -> res , "Conectando com o servidor..." ) ;
+		connectDDE ( plotdata , Pserver ) ;
 		}
 	int var = Gdata . curvar ;
 	// Solicita as variáveis, uma de cada vez
-	if ( ( Pserver -> hwnd != NULL ) && ( var < 3 ) ) {
-		int res = listenDDE ( plotdata , Pserver , var ) ;
+	if ( ( Pserver -> hwnd != NULL ) && ( var < NUMVARS ) ) {
+		sprintf ( plotdata -> res , "Registrando-se para receber atualizacoes..." ) ;
+		listenDDE ( plotdata , Pserver , var ) ;
 		Pserver -> enabled = true ;
 		}
+	if ( var < NUMVARS ) {
+		return ;
+		}
+	for ( var = 0 ; var < NUMVARS ; ++ var ) {
+		if ( Gdata . torequest [ var ] ) {
+			sprintf ( plotdata -> res , "Atualizando variavel %d..." , var ) ;
+			requestDDE ( plotdata , Pserver , var ) ;
+			return ;
+			}
+		}
+	sprintf ( plotdata -> res , "" ) ;
 	}
 
 	
@@ -323,18 +337,22 @@ void UpdateP ( PanelData * plotdata ) {
 	// Atualiza os totais
 	procbuf ( plotdata , Pserver ) ;
 	for ( int var = 0 ; var < NUMVARS ; ++ var ) {
-		sprintf ( plotdata -> total [ var ] . chora , "%8.2f" , plotdata -> total [ var ] . hora ) ;
-		sprintf ( plotdata -> total [ var ] . cdia , "%8.2f" , plotdata -> total [ var ] . dia ) ;
-		sprintf ( plotdata -> total [ var ] . cmes , "%8.2f" , plotdata -> total [ var ] . mes ) ;
-		float lastval = plotdata -> total [ var ] . lastval ;
+		SumData * ptot = & plotdata -> total [ var ];		
+		sprintf ( ptot -> chora , "%8.2f" , ptot -> hora ) ;
+		sprintf ( ptot -> cdia , "%8.2f" , ptot -> dia ) ;
+		sprintf ( ptot -> cmes , "%8.2f" , ptot -> mes ) ;
+		float lastval = ptot -> lastval ;
 		if ( lastval < 0 ) {
-			sprintf ( plotdata -> total [ var ] . clastval , " - " ) ;
+			sprintf ( ptot -> clastval , " - " ) ;
+			sprintf ( ptot -> ctlastr , " - " ) ;
 			}
 		else {
-			sprintf ( plotdata -> total [ var ] . clastval , "%4.2f" , plotdata -> total [ var ] . lastval ) ;
+			struct tm * ptime = localtime ( & ptot -> tlastr ) ;
+			sprintf ( ptot -> clastval , "%4.2f" , ptot -> lastval ) ;
+			sprintf ( ptot -> ctlastr , "%02d/%02d/%04d %02d:%02d:%02d" ,
+				ptime -> tm_mday , ptime -> tm_mon , 1900 + ptime -> tm_year , 
+				ptime -> tm_hour , ptime -> tm_min , ptime -> tm_sec ) ;
 			}
-		// sprintf ( plotdata -> total [ var ] . clasttime , "%2d/%2d/%4d %2d:%2d:2d" ,
-		// plotdata -> total [ var ] . lastval ) ;
 		}
 	sprintf ( plotdata -> res , "Buffer: r = %d, w = %d" , Gdata . posr , Gdata . posw ) ;
 	// Trata as fronteiras de tempo
@@ -350,13 +368,37 @@ void UpdateP ( PanelData * plotdata ) {
 	if ( fronth ) {
 		changeh ( plotdata ) ;
 		}
-	// Atualiza a tela
-	gtk_widget_queue_draw_area ( plotdata -> draw [ 0 ] , 0 , 0 , ( plotdata -> area_width ) [ 0 ] ,
-		plotdata -> original -> height ) ;
-	return ;
 	}
 
 
+void UpdateL ( PanelData * plotdata ) {
+// Atualiza os dados
+// Para ser usado em intervalos longos
+
+	// Verifica se já passou muito tempo desde a última leitura de dados
+	for ( int var = 0 ; var < NUMVARS ; ++ var ) {
+		time_t lastt = plotdata -> total [ var ] . tlastr ;
+		time_t tnow ;
+		time ( & tnow ) ;
+		double interval = difftime_( tnow , lastt ) ;
+		Gdata . torequest [ var ] = ( interval > REQUEST_INTERVAL ) ;
+		}
+	}
+
+
+void UpdateS ( PanelData * plotdata ) {
+// Atualiza os dados
+// Para ser usado em intervalos curtos
+
+	// Trata a conexão com o servidor
+	InitDDE ( plotdata ) ;
+	// Atualiza a tela
+	gtk_widget_queue_draw_area ( plotdata -> draw [ 0 ] , 0 , 0 , ( plotdata -> area_width ) [ 0 ] ,
+		plotdata -> original -> height ) ;
+
+	}
+
+	
 #define acum_( var ) 	( plotdata -> total [ var ] . mes )
 #define acud_( var ) 	( plotdata -> total [ var ] . dia )
 #define acuh_( var ) 	( plotdata -> total [ var ] . hora )
@@ -473,10 +515,22 @@ long listenDDE ( PanelData * plotdata , ServerData * pserver , int var ) {
 	cerr << "Enviou DDE_ADVISE " << pserver -> tag [ var ] << " res = " << res << "\n" ;
 	GlobalFree ( hOptions ) ; 
 	GlobalDeleteAtom ( atag ) ;
-	return 0 ;
+	return res ;
 	}
 
+	
+long requestDDE ( PanelData * plotdata , ServerData * pserver , int var ) {
+// Lê dados do servidor DDE
 
+	ATOM atag = GlobalAddAtom ( pserver -> tag [ var ] ) ;
+	long res = PostMessage ( pserver -> hwnd , WM_DDE_REQUEST , ( WPARAM ) Gdata . client ,
+		PackDDElParam ( WM_DDE_REQUEST , CF_TEXT , atag ) ) ;
+	cerr << "Enviou DDE_REQUEST " << pserver -> tag [ var ] << " res = " << res << "\n" ;
+	GlobalDeleteAtom ( atag ) ;
+	return res ;
+	}
+
+	
 LRESULT CALLBACK WndProc ( HWND wnd , UINT imsg , WPARAM wparam , LPARAM lparam ) {
 // Processa as mensagens recebidas
 
@@ -534,8 +588,8 @@ void receiveACK ( HWND wnd , UINT imsg , WPARAM wparam , LPARAM lparam ) {
 void receiveDATA ( HWND wnd , UINT imsg , WPARAM wparam , LPARAM lparam ) {
 // Trata recebimento de um WM_DDE_DATA
 	
-	struct timeval tnow ;
-	gettimeofday ( & tnow , NULL ) ;
+	time_t tnow ;
+	time ( & tnow ) ;
 	cerr << "DATA W = " << wparam << ", L = " << lparam ;
 	UINT low , high ;
 	UnpackDDElParam ( WM_DDE_DATA , lparam , & low, & high ) ;
@@ -581,8 +635,13 @@ void sendACK ( HWND server , ATOM item , bool ack ) {
 	}
 	
 	
-void readDDE ( char * var , char * value , struct timeval tstamp ) {
+void readDDE ( char * var , char * value , time_t tstamp ) {
 // Armazena os dados recebidos do servidor DDE
+	int nvar = findvar ( Pserver -> tag , var ) ;
+	if ( nvar < 0 ) {
+		return ;
+		}
+	Gdata . torequest [ nvar ] = false ;
 	ReadData * pbuf = & Gdata . buffer [ Gdata . posr ] ;
 	strcpy ( pbuf -> value , value ) ;
 	strcpy ( pbuf -> var , var ) ;
@@ -590,7 +649,7 @@ void readDDE ( char * var , char * value , struct timeval tstamp ) {
 	pbuf -> timestamp = tstamp ;
 	if ( ++ Gdata . posr >= BUFFSIZE ) {
 		Gdata . posr = 0 ;
-		}	
+		}
 	}
 
 	
@@ -640,7 +699,8 @@ void procbuf ( PanelData * plotdata , ServerData * pserver ) {
 				char * val = buf [ i ] . value ;
 				value = atof ( val ) ;
 				cerr << "reg. " << i << ", " ;
-				procvar ( plotdata , var , value , & buf [ i ] . timestamp ) ;
+				procvar ( plotdata , var , value , buf [ i ] . timestamp ) ;
+				plotdata -> total [ var ] . tlastr = buf [ i ] . timestamp ;
 				}
 			}
 		if ( ++ i >= BUFFSIZE ) {
@@ -650,33 +710,33 @@ void procbuf ( PanelData * plotdata , ServerData * pserver ) {
 	Gdata . posw = i ;
 	for ( int var = 0 ; var < NUMVARS ; ++ var ) {
 		value = ptot [ var ] . lastval ;
-		struct timeval vtime ;
-		gettimeofday ( & vtime , NULL ) ;
-		procvar ( plotdata , var , value , & vtime ) ;			
+		time_t vtime ;
+		time ( & vtime ) ;
+		procvar ( plotdata , var , value , vtime ) ;
 		}
 	return ;
 	}
 	
-void procvar ( PanelData * plotdata , int var , float value , struct timeval * ptime ) {
+void procvar ( PanelData * plotdata , int var , float value , time_t vtime ) {
 
 	SumData * ptot = plotdata -> total ;
 	// Obtém o último valor processsado
 	float last = ptot [ var ] . lastval ;
-	struct timeval * plastt = & ptot [ var ] . lastt ;
+	time_t lastt = ptot [ var ] . tlastc ;
 	float area = 0 ;
 	cerr << "var " << var << ": " ;
 	if ( last < 0 ) {
-		cerr << "valor " << value << " desprezado.\n" ;
+		cerr << "valor " << value << " desprezado. Timestamps = " << lastt << " e " << vtime << "\n" ;
 		}
 	else {
-		// integra usando a regra dos trapézios
-		float interval = timeval_subtract ( ptime , plastt ) ;
-		area = ( value + last ) / 2 * interval ;
-		cerr << value << " * " << interval << " -> " << area << "\n" ;
+		// integra
+		int interval = difftime_( vtime , lastt ) ;
+		area = last * interval ;
+		cerr << last << " * " << interval << " -> " << area << "\n" ;
 		}
 	ptot [ var ] . lastval = value ;
 	ptot [ var ] . last = area ;
-	* plastt = * ptime ;
+	ptot [ var ] . tlastc = vtime ;
 	if ( area > 0 ) {
 		totalize ( plotdata , var , area ) ;
 		}
@@ -685,26 +745,6 @@ void procvar ( PanelData * plotdata , int var , float value , struct timeval * p
 
 
 void totalm ( PanelData * plotdata , ServerData * pserver ) {
-	}
-	
-
-float timeval_subtract ( struct timeval * x, struct timeval * y ) {
-// Calcula o intervalo de tempo entre dois instantes
-
-	struct timeval result ;
-	if ( x -> tv_usec < y -> tv_usec ) {
-		int nsec = ( y -> tv_usec - x -> tv_usec ) / 1e6 + 1 ;
-        y -> tv_usec -= 1e6 * nsec;
-        y -> tv_sec += nsec ;
-		}
-	if ( x -> tv_usec - y -> tv_usec > 1e6 ) {
-		int nsec = (x -> tv_usec - y -> tv_usec) / 1e6 ;
-        y -> tv_usec += 1e6 * nsec ;
-        y -> tv_sec -= nsec;
-		}
-	result . tv_sec = x -> tv_sec - y -> tv_sec ;
-	result . tv_usec = x -> tv_usec - y -> tv_usec ;     
-	return result . tv_sec + 1e-6 * result . tv_usec ;
 	}
 	
 
@@ -849,7 +889,7 @@ void update_txt ( cairo_t * cr , PanelData * plotdata ) {
 		write_at ( cr , 150 , 30 * ( var + 2 ) , result [ var ] . cdia ) ;  
 		write_at ( cr , 210 , 30 * ( var + 2 ) , result [ var ] . cmes ) ;
 		write_at ( cr , 270 , 30 * ( var + 2 ) , result [ var ] . clastval ) ;
-		// write_at ( cr , 330 , 30 * ( var + 2 ) , result [ var ] . clasttime ) ;
+		write_at ( cr , 330 , 30 * ( var + 2 ) , result [ var ] . ctlastr ) ;
 		}
 	write_at ( cr , 30 , 350 , plotdata -> res ) ; 
 	}
@@ -932,7 +972,7 @@ static gboolean timeout ( PanelData * plotdata ) {
 static gboolean stimeout ( PanelData * plotdata ) {
 // Trata o evento "short timeout"
 
-	InitDDE ( plotdata ) ;
+	UpdateS ( plotdata ) ;
 	return true ;
 	}
 	
@@ -940,5 +980,6 @@ static gboolean stimeout ( PanelData * plotdata ) {
 static gboolean ltimeout ( PanelData * plotdata ) {
 // Trata o evento "long timeout"
 
+	UpdateL ( plotdata ) ;
 	return true ;
 	}

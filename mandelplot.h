@@ -40,7 +40,8 @@ const int DREC_SIZE = 100 ;
 const int PROC_INTERVAL = 10 ;
 const int PROC_SINTERVAL = 1 ;
 const int PROC_LINTERVAL = 100 ;
-const char * RECFMT = "%4d,%2d,%2d,%2d,%2d,%2d,%8.2f,%8.2f,%8.2f,%8.2f,%8.2f,%8.2f,%8.2f,%8.2f,%8.2f" ;
+const int REQUEST_INTERVAL = 300 ;
+const char * RECFMT = "%04d,%02d,%02d,%02d,%02d,%02d,%8.2f,%8.2f,%8.2f,%8.2f,%8.2f,%8.2f,%8.2f,%8.2f,%8.2f" ;
 
 
 // well-known, reserved colors
@@ -72,17 +73,17 @@ typedef	struct {
 
 typedef struct {
 	char chora [ MAX_STRSIZ ] , cdia [ MAX_STRSIZ ] , cmes [ MAX_STRSIZ ] ,
-		clastval [ MAX_STRSIZ ] , clasttime [ MAX_STRSIZ ] ;
+		clastval [ MAX_STRSIZ ] , ctlastr [ MAX_STRSIZ ] ;
 	float hora , dia , mes , last , lastval ;
 	char tag [ MAX_STRSIZ ] ;
-	struct timeval lastt ;
+	time_t tlastc , tlastr ;
 	} SumData ;
 
 typedef struct {
 	char var [ MAX_STRSIZ ] ;
 	char value [ MAX_STRSIZ ] ;
 	int quality ;
-	struct timeval timestamp ;
+	time_t timestamp ;
 	} ReadData ;
 	
 typedef struct {
@@ -108,6 +109,7 @@ typedef struct {
 	WNDPROC Oldfn ;
 	int curvar ;
 	time_t tlast ;
+	bool torequest [ NUMVARS ] , tolisten [ NUMVARS ] ;
 	} GlobalData ;
 	
 	
@@ -156,12 +158,12 @@ void markpoint ( int i , int j , GdkRGBA * wbuf , int width , int height , GdkRe
 void markregion ( PointData * region , GdkRGBA * wbuf , int width , GdkRectangle * dirty ) ;
 void paintdirty ( GdkRectangle * dirty , PanelData * plotdata ) ;
 
-float timeval_subtract ( struct timeval * x, struct timeval * y ) ;
 void defplotarea ( GtkWidget * window , int width , int height , int posh , int posv , PanelData * plotdata ) ;
 
 void UpdateP ( PanelData * plotdata ) ;
 void InitP ( PanelData * plotdata ) ;
-void UpdateS ( PanelData * plotdata ) ;
+void InitL ( PanelData * plotdata ) ;
+void InitS ( PanelData * plotdata ) ;
 void InitDDE ( PanelData * plotdata ) ;
 void totalize ( int var , float val ) ;
 void procbuf ( PanelData * plotdata , ServerData * pserver ) ;
@@ -170,6 +172,7 @@ LRESULT CALLBACK WndProc (HWND wnd , UINT imsg , WPARAM wparam , LPARAM lparam )
 void write_at ( cairo_t * cr , int x , int y , char * text ) ;
 long connectDDE ( PanelData * plotdata , ServerData * pserver ) ;
 long listenDDE ( PanelData * plotdata , ServerData * pserver , int var ) ;
+long connectDDE ( PanelData * plotdata , ServerData * pserver , int var ) ;
 void readDDE ( char * var , char * value , time_t tstamp ) ;
 int findvar ( const char * list[] , char * name ) ;
 void receiveACK ( HWND wnd , UINT imsg , WPARAM wparam , LPARAM lparam ) ;
@@ -186,6 +189,7 @@ void changem ( PanelData * plotdata ) ;
 void changed ( PanelData * plotdata ) ;
 void changeh ( PanelData * plotdata ) ;
 void checktfront ( bool * fronth , bool * frontd , bool * frontm ) ;
-void readDDE ( char * var , char * value , struct timeval tstamp ) ;
+void readDDE ( char * var , char * value , time_t tstamp ) ;
 void totalize ( PanelData * plotdata , int var , float val ) ;
-void procvar ( PanelData * plotdata , int var , float value , struct timeval * ptime ) ;
+void procvar ( PanelData * plotdata , int var , float value , time_t vtime ) ;
+long requestDDE ( PanelData * plotdata , ServerData * pserver , int var ) ;
