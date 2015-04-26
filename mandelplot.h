@@ -51,6 +51,7 @@ const char * VAR7 = "RAIZ." ;
 const char * VAR8 = "RAIZ." ;
 const char * VAR9 = "RAIZ." ;
 const int DREC_SIZE = 91 ;
+const char * WINDOW_TITLE = "Consumo de agua STRA" ;
 
 // well-known, reserved colors
 const GdkRGBA ColorWhite = { 1 , 1 , 1 , 1 } ;

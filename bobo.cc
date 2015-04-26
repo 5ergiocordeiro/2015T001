@@ -90,7 +90,7 @@ int main ( int argc , char * argv [ ] ) {
 	// Cria a janela
 	GtkWidget * window = gtk_window_new ( GTK_WINDOW_TOPLEVEL ) ;
 	original . window = window ;
-	gtkinit ( window , "Totalizacao de vazao" , GTK_WIN_POS_NONE , wwidth , wheigth , "techsteel.ico" , & pdata ) ;
+	gtkinit ( window , WINDOW_TITLE , GTK_WIN_POS_NONE , wwidth , wheigth , "techsteel.ico" , & pdata ) ;
 	
 	// Lê os últimos dados salvos
 	readData ( & pdata ) ;
@@ -156,7 +156,6 @@ void gtkinit ( GtkWidget * window , const char * title , GtkWindowPosition posit
 	// Defines frames
 	GtkWidget * mainframe = defframe ( window , -1 , "" , WINDOWBORDER , 0 , 0 , 0 , 0 ) ;
 	GtkWidget * plotframe = defframe ( mainframe , GTK_SHADOW_IN , "Results" , 0 , 0 , MENUHEIGHT , width , height ) ;
-	GtkWidget * ctrlframe = defframe ( mainframe , GTK_SHADOW_OUT , "Control bar" , 0 , width + SEPARATION , MENUHEIGHT , CTRLBARWIDTH , CTRLBARHEIGHT ) ;
 	// Creates menu bar
 	if ( defmenubar ( window , mainframe , plotdata ) == NULL ) {
 		return ;
@@ -169,21 +168,12 @@ void gtkinit ( GtkWidget * window , const char * title , GtkWindowPosition posit
 	gtk_fixed_put ( GTK_FIXED ( mainframe ) , plotbox, 0 , MENUHEIGHT ) ;
 	g_signal_connect ( G_OBJECT ( plotbox ) , "button-release-event" , G_CALLBACK ( userclkoff ) , plotdata ) ; 	
 	g_signal_connect ( G_OBJECT ( plotbox ) , "button-press-event" , G_CALLBACK ( userclkon ) , plotdata ) ; 	
-	// control bar
-	GtkWidget * ctrlbar = defframe ( mainframe , -1 , "" , 0 , width + SEPARATION , MENUHEIGHT , CTRLBARWIDTH , CTRLBARHEIGHT ) ;
 	// status bar
 	GtkWidget * statusbar = gtk_statusbar_new ( ) ;
 	gtk_widget_set_size_request ( statusbar , STATBARWIDTH , STATBARHEIGHT ) ;
 	gtk_fixed_put ( GTK_FIXED ( mainframe ) , statusbar , 0 , height + SEPARATION + MENUHEIGHT ) ;
 	gtk_statusbar_push ( GTK_STATUSBAR ( statusbar ) , gtk_statusbar_get_context_id ( GTK_STATUSBAR ( statusbar ) , "Initialized." ) , "Initialized." ) ;	
 	plotdata -> msg = statusbar ;
-	// Defines buttons
-	GtkWidget * plotbtn = defbutton ( ctrlbar , "Plot" , SEPARATION , SEPARATION + BUTTONHEIGHT ) ;
-	g_signal_connect ( plotbtn , "clicked" , G_CALLBACK ( plot ) , plotdata ) ;
-	GtkWidget * zoominbtn = defbutton ( ctrlbar , "Zoom in" , SEPARATION , 2 * ( SEPARATION + BUTTONHEIGHT ) ) ;
-	g_signal_connect ( zoominbtn , "clicked" , G_CALLBACK ( zoomin ) , plotdata ) ;
-	GtkWidget * zoomoutbtn = defbutton ( ctrlbar , "Zoom out" , SEPARATION , 3 * ( SEPARATION + BUTTONHEIGHT ) ) ;
-	g_signal_connect ( zoomoutbtn , "clicked" , G_CALLBACK ( zoomout ) , plotdata ) ;
 	}
 
 	
@@ -891,9 +881,7 @@ GtkWidget * defmenubar ( GtkWidget * window , GtkWidget * mainframe , PanelData 
 
     GtkActionGroup * actions = gtk_action_group_new ( "Actions" ) ;
     gtk_action_group_add_actions ( actions , entries , n_entries , plotdata ) ;
-    gtk_action_group_add_toggle_actions ( actions , toggle_entries , n_toggle_entries , plotdata ) ;
-    gtk_action_group_add_radio_actions ( actions , mouse_sel_entries, n_mouse_sel_entries , MMODE_NONE , G_CALLBACK ( act_mousesel ) , plotdata ) ;
-
+    
     GtkUIManager * ui = gtk_ui_manager_new ( ) ;
     gtk_ui_manager_insert_action_group ( ui , actions , 0 ) ;
 
