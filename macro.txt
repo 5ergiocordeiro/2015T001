@@ -1,0 +1,115 @@
+Option Explicit
+
+
+Const MDATAFILE = "c:\d_dados.txt"
+Const SeparadorVal = ";"
+Const SeparadorDat = "-"
+Const SeparadorTim = ":"
+Const NUMVARS = 8
+Const INICOL = 3
+
+
+Dim Glinha(NUMVARS) As Integer
+
+
+Sub init()
+    Glinha(1) = 12
+    Glinha(2) = 13
+    Glinha(3) = 14
+    Glinha(4) = 17
+    Glinha(5) = 18
+    Glinha(6) = 21
+    Glinha(7) = 22
+    Glinha(8) = 23
+End Sub
+
+
+Sub writeval(ByRef v() As String)
+    Dim data(3) As String
+    splitstr v(1), data, SeparadorDat
+    Dim mes As Integer
+    mes = data(2)
+    Dim coluna As Integer
+    coluna = INICOL + mes - 1
+    Dim linha As Integer
+    Dim valor As Double
+    Dim index As Integer
+    For index = 1 To NUMVARS
+        valor = v(index + 2)
+        Cells(Glinha(index), coluna).Value = valor
+    Next
+
+End Sub
+
+
+Sub lerdados()
+' Lê dados obtidos do Fix32 do arquivo .txt
+    Dim n As Integer
+    n = FreeFile
+    Open MDATAFILE For Input Shared As n
+    Dim s As String
+    Dim vals(NUMVARS + 2) As String
+    Dim data As String
+    Dim escrever As Boolean
+    Dim atual As String
+    Do While Not EOF(n)
+        Line Input #n, s
+        splitstr s, vals, SeparadorVal
+        atual = vals(1)
+        If Len(data) = 0 Then
+            data = vals(1)
+        Else
+            escrever = anadata(atual, data)
+            If escrever Then
+                writeval vals
+                data = vals(1)
+            End If
+        End If
+    Loop
+   Close
+
+End Sub
+
+
+Sub splitstr(ByRef s As String, ByRef v() As String, ByRef c As String)
+' Separa s em partes delimitadas por c e grava em v
+    Dim index As Integer
+    Dim pos As Integer
+    Dim begin As Integer
+    Dim token As String
+    index = 1
+    begin = 1
+    Do
+        pos = InStr(begin, s, c)
+        If pos > 0 Then
+            token = Mid(s, begin, pos - begin)
+            v(index) = token
+            begin = pos + 1
+            index = index + 1
+        Else
+            v(index) = Mid(s, begin)
+            Exit Sub
+        End If
+    Loop While True
+
+End Sub
+
+
+Sub exec()
+    init
+    lerdados
+End Sub
+
+
+Function anadata(ByRef d1 As String, ByRef d2 As String) As Boolean
+    Dim data1(3) As String
+    Dim data2(3) As String
+    splitstr d1, data1, SeparadorDat
+    splitstr d2, data2, SeparadorDat
+    If data1(1) <> data2(1) Or data1(2) <> data2(2) Then
+        anadata = True
+    Else
+        anadata = False
+    End If
+
+End Function

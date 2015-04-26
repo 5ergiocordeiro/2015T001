@@ -17,32 +17,40 @@ const int POINTRADIUS = 10 ;
 const int DRAWAREAWIDTH = 1000 ;
 const int MAXDRAWAREA = 1 ;
 
-const int NUMVARS = 9 ;
+const int NUMVARS = 8 ;
 const int BUFFSIZE = 1000 ;
 const int QUALITY_GOOD = 192 ;
-const char * TSERVER1_SERVER_NAME = "Microsoft Excel - dde.xls" ;
-const char * TSERVER2_SERVER_NAME = "FIX DDE Server" ;
+const char * EXCEL_SERVER_NAME = "Microsoft Excel - dde.xls" ;
 const char * FIX32_SERVER_NAME = "FIX DDE Server" ;
 const char * EXCEL_SERVER_TYPE = "Excel" ;
 const char * FIX32_SERVER_TYPE = "Fix32" ;
-const char * EXCEL_APP = "Excel";
-const char * FIX32_APP = "DMDDE";
-const char * TSERVER1_TOPIC = "[dde.xls]Sheet1";
-const char * TSERVER2_TOPIC = "DATA";
-const char * FIX32_TOPIC = "DATA";
-const int NUMSERVERS = 3;
+const char * EXCEL_APP = "Excel" ;
+const char * FIX32_APP = "DMDDE" ;
+const char * EXCEL_TOPIC = "[dde.xls]Sheet1" ;
+const char * FIX32_TOPIC = "DATA" ;
+const int NUMSERVERS = 3 ;
 const UINT DDE_NACK = 0 ;
 const UINT DDE_ACK = 0x8000 ;
-const int MAX_STRSIZ = 30 ;
-const char * HDATAFILE = "%04d_dados.txt" ;
-const char * MDATAFILE = "%02d_dados.txt" ;
-const int DREC_SIZE = 100 ;
+const int MAX_STRSIZ = 50 ;
 const int PROC_INTERVAL = 10 ;
 const int PROC_SINTERVAL = 1 ;
 const int PROC_LINTERVAL = 100 ;
 const int REQUEST_INTERVAL = 300 ;
-const char * RECFMT = "%04d,%02d,%02d,%02d,%02d,%02d,%8.2f,%8.2f,%8.2f,%8.2f,%8.2f,%8.2f,%8.2f,%8.2f,%8.2f" ;
-
+const char * HDATAFILE = "h_dados.txt" ;
+const char * MDATAFILE = "d_dados.txt" ;
+const char * RECFMTWRT = "%s;%8.2f;%8.2f;%8.2f;%8.2f;%8.2f;%8.2f;%8.2f;%8.2f\n" ;
+const char * RECFMTRD = "%8.2f;%8.2f;%8.2f;%8.2f;%8.2f;%8.2f;%8.2f;%8.2f\"" ;
+const char * RECFMTTIM = "%04d-%d-%d;%d:%02d:%02d" ;
+const char * VAR1 = "RAIZ." ;
+const char * VAR2 = "RAIZ." ;
+const char * VAR3 = "RAIZ." ;
+const char * VAR4 = "RAIZ." ;
+const char * VAR5 = "RAIZ." ;
+const char * VAR6 = "RAIZ." ;
+const char * VAR7 = "RAIZ." ;
+const char * VAR8 = "RAIZ." ;
+const char * VAR9 = "RAIZ." ;
+const int DREC_SIZE = 91 ;
 
 // well-known, reserved colors
 const GdkRGBA ColorWhite = { 1 , 1 , 1 , 1 } ;
@@ -99,6 +107,7 @@ typedef	struct {
 	const char * name , * type ;
 	HWND hwnd ;
 	const char * app , * topic , * tag [ NUMVARS ] ;
+	float factor [ NUMVARS ] ;
 	bool enabled ;
 	} ServerData ;
 	
@@ -110,11 +119,14 @@ typedef struct {
 	int curvar ;
 	time_t tlast ;
 	bool torequest [ NUMVARS ] , tolisten [ NUMVARS ] , tounlisten [ NUMVARS ] ;
+	bool zd , zh ;
+	int serverno , verbose ;
+	ServerData server ;
 	} GlobalData ;
 	
 	
-#define Min(x,y)	(((x)>(y))?(y):(x))
-#define Max(x,y)	(((x)>(y))?(x):(y))
+#define min_( x , y )				( ( ( x ) > ( y ) ) ? ( y ) : ( x ) )
+#define max_( x , y )				( ( ( x ) > ( y ) ) ? ( x ) : ( y ) )
 
 
 // Prototypes
@@ -186,11 +198,14 @@ GetlastRes fgetlast ( char * fname , void * pdata , void * dtime ) ;
 static gboolean timeout ( PanelData * plotdata ) ;
 static gboolean ltimeout ( PanelData * plotdata ) ;
 static gboolean stimeout ( PanelData * plotdata ) ;
-void changem ( PanelData * plotdata ) ;
-void changed ( PanelData * plotdata ) ;
-void changeh ( PanelData * plotdata ) ;
-void checktfront ( bool * fronth , bool * frontd , bool * frontm ) ;
+void changem ( PanelData * plotdata , char * ctime ) ;
+void changed ( PanelData * plotdata , char * ctime ) ;
+void changeh ( PanelData * plotdata , char * ctime ) ;
+void checktfront ( bool * fronth , bool * frontd , bool * frontm , char * ctime ) ;
 void readDDE ( char * var , char * value , time_t tstamp ) ;
 void totalize ( PanelData * plotdata , int var , float val ) ;
-void procvar ( PanelData * plotdata , int var , float value , time_t vtime ) ;
+void procvar ( PanelData * plotdata ,  ServerData * pserver , int var , float value , time_t vtime ) ;
 long requestDDE ( PanelData * plotdata , ServerData * pserver , int var ) ;
+float torange ( float val , float min , float max ) ;
+void parsecmd (int argc , char * argv [] ) ;
+void unlist ( char * list , char * array [] ) ;
