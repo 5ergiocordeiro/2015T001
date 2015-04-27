@@ -1050,7 +1050,7 @@ void parsecmd (int argc , char * argv [] ) {
 	float flist [ NUMVARS ] ; 
 	int res ;
 	opterr = 0 ;
-	while ( -1 != ( res = getopt ( argc , argv , "v:s:n:m:z:" ) ) ) {
+	while ( -1 != ( res = getopt ( argc , argv , "v:s:n:m:z:t:" ) ) ) {
 		switch ( res ) {
 		case 'v' :
 			vval = torange ( atoi ( optarg ) , 0 , 3 ) ;
@@ -1060,8 +1060,8 @@ void parsecmd (int argc , char * argv [] ) {
 			break ;
 		case 't' :
 			tval = optarg ;
-			te = ! strcmp ( zval , "e" ) ;
-			tf = ! strcmp ( zval , "f" ) ;
+			te = ! strcmp ( tval , "e" ) ;
+			tf = ! strcmp ( tval , "f" ) ;
 			break ;
 		case 'n' :
 			for ( int index = 0 ; index < NUMVARS ; ++ index ) {
@@ -1111,14 +1111,14 @@ void parsecmd (int argc , char * argv [] ) {
 	if ( nval ) {
 		cerr << "n = " ;
 		for ( int index = 0 ; index < NUMVARS ; ++ index ) {
-			cerr << nlist [ index ] << "," ;
+			cerr << nlist [ index ] << ";" ;
 			}
 		cerr << " " ;
 		}
 	if ( fval ) {
 		cerr << "m = " ;
 		for ( int index = 0 ; index < NUMVARS ; ++ index ) {
-			cerr << flist [ index ] << "," ;
+			cerr << flist [ index ] << ";" ;
 			}
 		cerr << " " ;
 		}
@@ -1160,12 +1160,17 @@ float torange ( float val , float min , float max ) {
 void unlist ( char * list , char * array [] ) {
 	char * ppos , * pbegin = list ;
 	int index = 0 ;
-	while ( NULL != ( ppos = strchr ( pbegin , ',' ) ) ) {
+	while ( true ) {
+		ppos = strchr ( pbegin , ',' ) ;
+		if ( ppos == NULL ) {
+			strcpy ( array [ index ] , pbegin ) ;
+			return ;
+			}
 		strncpy ( array [ index ] , pbegin , ppos - pbegin ) ;
+		array [ index ] [ ppos - pbegin ] = '\0' ;
 		if ( ++ index >= NUMVARS ) {
 			return ;
 			}
 		pbegin = ppos + 1 ;
 		}
-	strcpy ( array [ index ] , pbegin ) ;
 	}
