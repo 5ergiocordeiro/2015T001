@@ -1,23 +1,23 @@
 // Constants
 // widgets
 const int SEPARATION = 5 ;
-const int MAXWIDTH = 1000 ;
-const int MAXHEIGHT = 1000 ;
 const int BUTTONWIDTH = 80 ; 
 const int BUTTONHEIGHT = 35 ;
-const int CTRLBARWIDTH = BUTTONWIDTH + 2 * SEPARATION ;
-const int CTRLBARHEIGHT = 300 ;
+const int CTRLBARWIDTH = 0 ; // BUTTONWIDTH + 2 * SEPARATION ;
+const int CTRLBARHEIGHT = 0 ;
 const int STATBARWIDTH = 500 ;
 const int STATBARHEIGHT = 30 ;
 const int WINDOWBORDER = 5 ;
 const int STATUSMSGSZ = 200 ;
 const int MENUHEIGHT  = 30 ;
 const int POINTRADIUS = 10 ;
+const int PLOTAREAHEIGTH = 320 ;
+const int PLOTAREAWIDTH = 520 ;
 
-const int DRAWAREAWIDTH = 1000 ;
+const int DRAWAREAWIDTH = 520 ;
 const int MAXDRAWAREA = 1 ;
 
-const int NUMVARS = 8 ;
+const int NUMVARS = 9 ;
 const int BUFFSIZE = 1000 ;
 const int QUALITY_GOOD = 192 ;
 const char * EXCEL_SERVER_NAME = "Microsoft Excel - dde.xls" ;
@@ -28,6 +28,7 @@ const char * EXCEL_APP = "Excel" ;
 const char * FIX32_APP = "DMDDE" ;
 const char * EXCEL_TOPIC = "[dde.xls]Sheet1" ;
 const char * FIX32_TOPIC = "DATA" ;
+
 const int NUMSERVERS = 3 ;
 const UINT DDE_NACK = 0 ;
 const UINT DDE_ACK = 0x8000 ;
@@ -36,22 +37,24 @@ const int PROC_INTERVAL = 10 ;
 const int PROC_SINTERVAL = 1 ;
 const int PROC_LINTERVAL = 100 ;
 const int REQUEST_INTERVAL = 300 ;
+const int TERMINATE_INTERVAL = 1000 ;
 const char * HDATAFILE = "h_dados.txt" ;
 const char * MDATAFILE = "d_dados.txt" ;
-const char * RECFMTWRT = "%s;%8.2f;%8.2f;%8.2f;%8.2f;%8.2f;%8.2f;%8.2f;%8.2f\n" ;
-const char * RECFMTRD = "%8.2f;%8.2f;%8.2f;%8.2f;%8.2f;%8.2f;%8.2f;%8.2f\"" ;
-const char * RECFMTTIM = "%04d-%d-%d;%d:%02d:%02d" ;
-const char * VAR1 = "RAIZ." ;
-const char * VAR2 = "RAIZ." ;
-const char * VAR3 = "RAIZ." ;
-const char * VAR4 = "RAIZ." ;
-const char * VAR5 = "RAIZ." ;
-const char * VAR6 = "RAIZ." ;
-const char * VAR7 = "RAIZ." ;
-const char * VAR8 = "RAIZ." ;
-const char * VAR9 = "RAIZ." ;
-const int DREC_SIZE = 91 ;
+const char * RECFMTWRT = "%s;%8.0f;%8.0f;%8.0f;%8.0f;%8.0f;%8.0f;%8.0f;%8.0f;%8.0f\n" ;
+const char * RECFMTRD = "%s;%s;%s;%s;%s;%s;%s;%s;%s;%s;%s" ;
+const char * RECFMTTIM = "%04d-%02d-%02d;%02d:%02d:%02d" ;
+const char * VAR1 = "FIX.VAZ_FIT1.F_CV" ;
+const char * VAR2 = "FIX.VAZ_FIT2.F_CV" ;
+const char * VAR3 = "FIX.VAZ_FIT3.F_CV" ;
+const char * VAR4 = "FIX.VAZ_FIT4.F_CV" ;
+const char * VAR5 = "FIX.VAZ_FIT5.F_CV" ;
+const char * VAR6 = "FIX.VAZ_FIT6.F_CV" ;
+const char * VAR7 = "FIX.VAZ_FIT9.F_CV" ;
+const char * VAR8 = "FIX.VAZ_FIT11.F_CV" ;
+const char * VAR9 = "FIX.VAZ_FIT12.F_CV" ;
+const int DREC_SIZE = 102 ;
 const char * WINDOW_TITLE = "Consumo de agua STRA" ;
+const float SCALE_FACTOR = 1.0 / 3600 ;
 
 // well-known, reserved colors
 const GdkRGBA ColorWhite = { 1 , 1 , 1 , 1 } ;
@@ -107,7 +110,7 @@ typedef struct {
 typedef	struct {
 	const char * name , * type ;
 	HWND hwnd ;
-	const char * app , * topic , * tag [ NUMVARS ] ;
+	const char * app , * topic , * tag [ NUMVARS ] , * nick [ NUMVARS ] ;
 	float factor [ NUMVARS ] ;
 	bool enabled ;
 	} ServerData ;
@@ -120,14 +123,18 @@ typedef struct {
 	int curvar ;
 	time_t tlast ;
 	bool torequest [ NUMVARS ] , tolisten [ NUMVARS ] , tounlisten [ NUMVARS ] ;
-	bool zd , zh ;
+	bool zd , zh , brazil , nick ;
 	int serverno , verbose ;
 	ServerData server ;
+	bool duplicated ;
 	} GlobalData ;
 	
+
 	
 #define min_( x , y )				( ( ( x ) > ( y ) ) ? ( y ) : ( x ) )
 #define max_( x , y )				( ( ( x ) > ( y ) ) ? ( x ) : ( y ) )
+#define log_( x , c )				if ( Gdata . verbose >= ( x ) ) { c }
+
 
 
 // Prototypes
@@ -182,7 +189,7 @@ void totalize ( int var , float val ) ;
 void procbuf ( PanelData * plotdata , ServerData * pserver ) ;
 BOOL CALLBACK lpfn(HWND hWnd, int lParam) ;
 LRESULT CALLBACK WndProc (HWND wnd , UINT imsg , WPARAM wparam , LPARAM lparam ) ;
-void write_at ( cairo_t * cr , int x , int y , char * text ) ;
+void write_at ( cairo_t * cr , int x , int y , const char * text ) ;
 long connectDDE ( PanelData * plotdata , ServerData * pserver ) ;
 long listenDDE ( PanelData * plotdata , ServerData * pserver , int var ) ;
 long unlistenDDE ( PanelData * plotdata , ServerData * pserver , int var ) ;
@@ -194,8 +201,8 @@ void receiveDATA ( HWND wnd , UINT imsg , WPARAM wparam , LPARAM lparam ) ;
 void sendACK ( HWND server , ATOM item , bool ack ) ;
 bool fexists ( char * fname ) ;
 void readData ( PanelData * plotdata ) ;
-FILE * openDatafile ( char * datafile , void * data , bool * rfail , void * dtime ) ;
-GetlastRes fgetlast ( char * fname , void * pdata , void * dtime ) ;
+FILE * openDatafile ( char * datafile , void * data , bool * rfail ) ;
+GetlastRes fgetlast ( char * fname , void * pdata ) ;
 static gboolean timeout ( PanelData * plotdata ) ;
 static gboolean ltimeout ( PanelData * plotdata ) ;
 static gboolean stimeout ( PanelData * plotdata ) ;
@@ -210,3 +217,8 @@ long requestDDE ( PanelData * plotdata , ServerData * pserver , int var ) ;
 float torange ( float val , float min , float max ) ;
 void parsecmd (int argc , char * argv [] ) ;
 void unlist ( char * list , char * array [] ) ;
+char * valstrcpy ( char * dst , char * src ) ;
+void act_openexc ( GtkAction * action , gpointer user_data ) ;
+int mysplit ( char * str , char car , char * dst , int siz ) ;
+void runsrv ( void ) ;
+long endDDE ( PanelData * plotdata , ServerData * pserver ) ;

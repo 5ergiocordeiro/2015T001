@@ -10,6 +10,7 @@
 #include <dde.h>
 #include <gdk/gdkwin32.h>
 #include <unistd.h>
+#include <glib.h>
 
 using namespace std;
 #include "mandelplot.h"
@@ -26,18 +27,23 @@ ServerData * Pserver = NULL ;
 ServerData Gserver [ NUMSERVERS ] = {
 	// Servidor de produção
 	{ FIX32_SERVER_NAME , FIX32_SERVER_TYPE , NULL , FIX32_APP , FIX32_TOPIC ,
-		{ VAR1 , VAR2 , VAR3 , VAR4 , VAR5 , VAR6 , VAR7 , VAR8 } ,
-		{ 1.0/3600 , 1.0/3600 , 1.0/3600 , 1.0/3600 , 1.0/3600 , 1.0/3600 , 1.0/3600 , 1.0/3600 } , false } ,
+		{ VAR1 , VAR2 , VAR3 , VAR4 , VAR5 , VAR6 , VAR7 , VAR8 , VAR9 } ,
+		{ "LC1 spray" , "LC2 spray" , "Lam 1" , "Lam 2" , "Morgan" , "Moldes" , "Torre L3" , "Lam 3" , "LPP3" } ,
+		{ SCALE_FACTOR , SCALE_FACTOR , SCALE_FACTOR , SCALE_FACTOR , SCALE_FACTOR , SCALE_FACTOR ,  
+			SCALE_FACTOR ,  SCALE_FACTOR ,  SCALE_FACTOR } , false } ,
 	// Servidores de teste
 	// ... planilha Excel
 	{ EXCEL_SERVER_NAME , EXCEL_SERVER_TYPE , NULL , EXCEL_APP , EXCEL_TOPIC , 
-		{ "r1c1" , "r2c1" , "r3c1" , "r4c1" , "r5c1" , "r6c1" , "r7c1" , "r8c1" } ,
-		{ 1.0/3600 , 1.0/3600 , 1.0/3600 , 1.0/3600 , 1.0/3600 , 1.0/3600 , 1.0/3600 , 1.0/3600 } , false } ,	
+		{ "r1c1" , "r2c1" , "r3c1" , "r4c1" , "r5c1" , "r6c1" , "r7c1" , "r8c1" , "r9c1" } ,
+		{ "r1c1" , "r2c1" , "r3c1" , "r4c1" , "r5c1" , "r6c1" , "r7c1" , "r8c1" , "r9c1" } ,
+		{ 1 , 1 , 1 , 1 , 1 , 1 , 1 , 1 , 1 } , false } ,
 	// ... Fix32 Sample System
 	{ FIX32_SERVER_NAME , FIX32_SERVER_TYPE , NULL , FIX32_APP , FIX32_TOPIC ,
 		{ "DEMO.RAMP.F_CV" , "DEMO.TEMP.F_CV.F_CV" , "DEMO.PRESSURE.F_CV" , "DEMO.VOLUME.F_CV" ,
-		"DEMO.LEVEL.F_CV.F_CV" , "DEMO.PV1.F_CV" , "DEMO.PV2.F_CV" , "DEMO.RATE.F_CV" } ,
-		{ 1.0/3600 , 1.0/3600 , 1.0/3600 , 1.0/3600 , 1.0/3600 , 1.0/3600 , 1.0/3600 , 1.0/3600 } , false } ,
+		"DEMO.LEVEL.F_CV.F_CV" , "DEMO.PV1.F_CV" , "DEMO.PV2.F_CV" , "DEMO.RATE.F_CV" , "DEMO.TEMPTR.F_CV" } ,
+		{ "tag0" , "tag1" , "tag2" , "tag3" , "tag4" , "tag5" , "tag6" , "tag7" , "tag8" } ,
+		{ 1 , 1 , 1 , 1 , 1 , 1 , 1 , 1 , 1 } , false } ,
+
 	} ;
 	
 
@@ -46,12 +52,18 @@ ServerData Gserver [ NUMSERVERS ] = {
 int main ( int argc , char * argv [ ] ) {
 // Syntaxe:
 //   rdDDE {-s server_no} {-v verbose_level:0} {-zh} {-zd}
-//   rdDDE -s3 -t server_type -n tagname1,tagname2 ... tagname9 -m multiplier,multiplier2 ... multiplier9 {-v verbose_level:0} {-zh} {-zd}
+//   rdDDE -s3 -t server_type -n tagname1,tagname2 ... tagname9 -m nick1,nick2 ... nick9 {-v verbose_level:0} {-zh} {-zd} {-b}
 // server_no: 0 a 3, default 0
 // verbose_level: 0 a 3, default 0
-// -zh, -zd Zerar os valores nas fronteiras de hora e dia
+//	3: trace para obter informações necessárias para o desenvolvimento
+//	2: trace detalhado para acompanhamento da execução
+//	1: trace resumido para acompanhamento da execução
+//	0: apenas mensagens de erro são exibidas
+// -zh, -zd Não zerar os valores nas fronteiras de hora e dia
+// -b remover pontos de milhar
 // server_type: Excel ou Fix32
-// tagname1 a tagname9: tags 
+// tagname1 a tagname9: tags
+// nick1 a nick9: nicknames
 // Exemplos:
 //   rdDDE
 //     lê do servidor de produção com todas as configurações default
@@ -62,7 +74,15 @@ int main ( int argc , char * argv [ ] ) {
 //   rdDDE -s3 -t Fix32 -n 
 //     lê do servidor de testes 3, que é um Fix32, as tags 
 
+	Gdata . duplicated = false ;
+	EnumWindows ( (WNDENUMPROC) & lpfn , 0 ) ;
+	if ( Gdata . duplicated ) {
+		cerr << "Duplicado!" ;
+		return 1 ;
+		}
+
 	// Processa a linha de comando
+	Gdata . verbose = 3 ;
 	parsecmd ( argc , argv ) ;
 
 	// Inicializa as variáveis globais
@@ -74,7 +94,7 @@ int main ( int argc , char * argv [ ] ) {
 	original . gdk_window = NULL ;
 	original . window = NULL ;
 	original. hwnd = NULL ;
-	int wwidth = 500 , wheigth = 500 ;
+	int wwidth = PLOTAREAWIDTH , wheigth = PLOTAREAHEIGTH ;
 	initdata ( original , wwidth , wheigth ) ;
 	PanelData pdata ;
 	pdata . original = & original ;
@@ -155,13 +175,14 @@ void gtkinit ( GtkWidget * window , const char * title , GtkWindowPosition posit
 	g_signal_connect_swapped ( G_OBJECT ( window ) , "destroy" , G_CALLBACK ( gtk_main_quit ) , NULL ) ;
 	// Defines frames
 	GtkWidget * mainframe = defframe ( window , -1 , "" , WINDOWBORDER , 0 , 0 , 0 , 0 ) ;
-	GtkWidget * plotframe = defframe ( mainframe , GTK_SHADOW_IN , "Results" , 0 , 0 , MENUHEIGHT , width , height ) ;
+	GtkWidget * plotframe = defframe ( mainframe , GTK_SHADOW_IN , "Resultados" , 0 , 0 , MENUHEIGHT , width , height ) ;
 	// Creates menu bar
 	if ( defmenubar ( window , mainframe , plotdata ) == NULL ) {
 		return ;
 		}
 	// Defines areas
 	// plot area
+	log_( 3 , cerr << "window w = " << width << " h = " << height << "\n" ; ) ;
 	defplotarea ( mainframe , width , height , 0 , MENUHEIGHT , plotdata ) ;
 	GtkWidget * plotbox = gtk_event_box_new ( ) ;
 	gtk_widget_set_size_request ( plotbox , width , height ) ;
@@ -192,45 +213,55 @@ void readData ( PanelData * plotdata ) {
 // Lê os últimos dados gravados
 	
 	// Tenta ler do arquivo de dados horários e também do arquivo de dados diários
-	char data [2] [ NUMVARS ] [ MAX_STRSIZ ] ;
+	char data [2] [ NUMVARS + 2 ] [ MAX_STRSIZ ] ;
 	bool rfail1 , rfail2 ;
-	int ttime [2] [6] ;
-	sprintf ( plotdata -> hfile , HDATAFILE , 2015 ) ;
-	sprintf ( plotdata -> mfile , MDATAFILE , 4 ) ;	
-	FILE * fph = openDatafile ( plotdata -> hfile , ( void * ) data [0] , & rfail1 , ( void * ) ttime ) ;
+	sprintf ( plotdata -> hfile , HDATAFILE ) ;
+	sprintf ( plotdata -> mfile , MDATAFILE ) ;	
+	FILE * fph = openDatafile ( plotdata -> hfile , ( void * ) data [0] , & rfail1 ) ;
 	plotdata -> hdfile = fph ;
-	FILE * fpm = openDatafile ( plotdata -> mfile , ( void * ) data [1] , & rfail2 , ( void * ) ttime ) ;
+	FILE * fpm = openDatafile ( plotdata -> mfile , ( void * ) data [1] , & rfail2 ) ;
 	plotdata -> mdfile = fpm ;
-/*
 	// Copia os dados lidos para as variáveis globais
-	int ind = -1 ;
-	if ( ! rfail2 ) {
-		for ( int var = 0 ; var < NUMVARS ; ++ var ) {
-			plotdata -> total [ var ] . hora <- atof ( data [ ind ] [ var ] ) ;
-			}
-		ind = 1 ;
-		}
-	if ( ! rfail1 ) {
-		for ( int var = 0 ; var < NUMVARS ; ++ var ) {
-			plotdata -> total [ var ] . dia <- atof ( data [ ind ] [ var ] ) ;
-			}
-		ind = 0 ;
-		}
+	int ind = ( rfail1 && rfail2 ) ? -1 : ( rfail2 ? 0 : 1 ) ;
+	log_( 2 , cerr << cerr << "readData ind. " << ind << ":" ; ) ;
 	if ( ind >= 0 ) {
-		struct tm tread ;
-		tread . tm_year = ttime [ ind ] [0] ;
-		tread . tm_mon = ttime [ ind ] [1] ;		
-		tread . tm_mday = ttime [ ind ] [2] ;
-		tread . tm_hour = ttime [ ind ] [3] ;
-		tread . tm_min = ttime [ ind ] [4] ;		
-		tread . tm_sec = ttime [ ind ] [5] ;
-		Gdata . tlast = mktime ( & tread ) ;
+		for ( int var = 0 ; var < NUMVARS ; ++ var ) {
+			float val = atof ( data [ ind ] [ var + 2 ] ) ;
+			plotdata -> total [ var ] . hora = 0 ;
+			plotdata -> total [ var ] . dia = 0 ;
+			plotdata -> total [ var ] . mes = val ;
+			log_( 2 , cerr << "var" << var << " = " << val << ", " ; ) ;
+			}
+		log_( 2 , cerr << "data " << data [ ind ] [0] << "|" << data [ ind ] [1] << ", " ; ) ;
+		struct tm tread , * timelast ;
+		char ttime [3] [ MAX_STRSIZ ] ;
+		mysplit ( data [ ind ] [0] , '-' , ( char * ) ttime , MAX_STRSIZ ) ;
+		tread . tm_year = atoi ( ttime [0] ) - 1900 ;
+		tread . tm_mon = atoi ( ttime [1] ) - 1 ;		
+		tread . tm_mday = atoi ( ttime [2] ) ;
+		mysplit ( data [ ind ] [1] , ':' , ( char * ) ttime , MAX_STRSIZ ) ;
+		tread . tm_hour = atoi ( ttime [0] ) ;
+		tread . tm_min = atoi ( ttime [1] ) ;		
+		tread . tm_sec = atoi ( ttime [2] ) ;
+		char ctime [ MAX_STRSIZ ] ;
+		sprintf ( ctime , RECFMTTIM , tread . tm_year + 1900 , tread . tm_mon + 1 , tread . tm_mday ,
+			tread . tm_hour , tread . tm_min , tread . tm_sec ) ;
+		log_( 2 , cerr << " time = " << ctime ; ) ;
+		time_t tlast = mktime ( & tread ) ;
+		timelast = localtime ( & tlast ) ;
+		if ( timelast == NULL ) {
+			time ( & tlast ) ;
+			timelast = localtime ( & tlast ) ;
+			}
+		Gdata . tlast = tlast ;
+		sprintf ( ctime , RECFMTTIM , timelast -> tm_year + 1900 , timelast -> tm_mon + 1 , timelast -> tm_mday 				, timelast -> tm_hour , timelast -> tm_min , timelast -> tm_sec ) ;
+		log_( 2 , cerr << " time = " << ctime ; ) ;
 		}
-*/
+	log_( 2 , cerr << "\n" ; ) ;
 	}
 		
 
-FILE * openDatafile ( char * datafile , void * data , bool * rfail , void * dtime ) {
+FILE * openDatafile ( char * datafile , void * data , bool * rfail ) {
 // Obtém os dados em um arquivo
 	
 	* rfail = true ;
@@ -238,8 +269,8 @@ FILE * openDatafile ( char * datafile , void * data , bool * rfail , void * dtim
 	if ( ! fexists ( datafile ) ) {
 		cerr << "Erro ao ler o arquivo de dados (" << datafile << ")\n" ;
 		}
-/*
-		int res = fgetlast ( datafile , data , dtime ) ;
+	else {
+		int res = fgetlast ( datafile , data ) ;
 		switch ( res ) {
 		case FGETLAST_OK :
 			* rfail = false ;
@@ -255,17 +286,6 @@ FILE * openDatafile ( char * datafile , void * data , bool * rfail , void * dtim
 			break ;
 			}
 		}
-	if ( rfail ) {
-		fp = fopen ( datafile , "w" ) ;
-		if ( fp == NULL ) {
-			cerr << "Erro ao tentar apagar o arquivo de dados (" << datafile << ")\n" ;
-			}
-		else {
-			cerr << "Aberto novo arquivo de dados (" << datafile << ")\n" ;
-			}
-		}
-	else {
-*/
 	fp = fopen ( datafile , "a" ) ;
 	if ( fp == NULL ) {
 		cerr << "Erro ao tentar gravar o arquivo de dados (" << datafile << ")\n" ;
@@ -274,11 +294,11 @@ FILE * openDatafile ( char * datafile , void * data , bool * rfail , void * dtim
 	}
 
 	
-// Não usada nesta revisão
-GetlastRes fgetlast ( char * fname , void * pdata , void * dtime ) {
+GetlastRes fgetlast ( char * fname , void * pdata ) {
 // Obtém o último registro do arquivo
 
 	FILE * fp = fopen ( fname , "a+" ) ;
+	char record [255] ;
 	if ( fp == NULL ) {
 		return FGETLAST_ERROPEN ;
 		}
@@ -287,12 +307,13 @@ GetlastRes fgetlast ( char * fname , void * pdata , void * dtime ) {
 		fclose ( fp ) ;
 		return FGETLAST_ERRSEEK ;
 		}
-	int * ptime = ( int * ) dtime ;
 	char * data = ( char * ) pdata ;
-	res = fscanf ( fp , RECFMTRD , 
-			data , data + MAX_STRSIZ , data + 2 * MAX_STRSIZ , data + 3 * MAX_STRSIZ , data + 4 * MAX_STRSIZ ,
-			data + 5 * MAX_STRSIZ , data + 6 * MAX_STRSIZ , data + 7 * MAX_STRSIZ , data + 8 * MAX_STRSIZ ) ;
-	if ( res != NUMVARS ) {
+	fgets ( record , 255 , fp ) ;
+	log_( 3 , cerr << "fgetlast " << record << "size = " << strlen ( record ) ; ) ;	
+	res = mysplit ( record , ';' , data , MAX_STRSIZ ) ;
+	log_( 3 , cerr << ", " << res << "\n" ; ) ;
+	log_( 3 , cerr << ( char * ) data << "|" << ( char * ) data + MAX_STRSIZ << "\n" ; ) ;
+	if ( res != NUMVARS + 2 ) {
 		fclose ( fp ) ;
 		return FGETLAST_ERRREAD ;
 		}
@@ -300,20 +321,45 @@ GetlastRes fgetlast ( char * fname , void * pdata , void * dtime ) {
 	return FGETLAST_OK ;
 	}
 
+ 
+int mysplit ( char * str , char car , char * dst , int siz ) {
+// Divide a string de acordo com o separador dado
+
+	int index = 0 ;
+	char * pstr ;
+	while ( true ) {
+		for ( pstr = str ; * pstr != car ; ++ pstr ) {
+			if ( * pstr == '\0' ) {
+				int ncar = pstr - str ;
+				strncpy ( dst , str , ncar ) ;
+				dst [ ncar ] = '\0' ;
+				dst += siz ;
+				str = pstr + 1 ;
+				return index + 1 ;
+				}
+			}
+		int ncar = pstr - str ;
+		strncpy ( dst , str , ncar ) ;
+		dst [ ncar ] = '\0' ;
+		dst += siz ;
+		str = pstr + 1 ;
+		++ index ;
+		}
+	return index ;
+ 	}
+
 	
 void InitP ( PanelData * plotdata ) {
 // Primeira atualização
 	sprintf ( plotdata -> res , "" ) ;
 	for ( int var = 0 ; var < NUMVARS ; ++ var ) {
-		plotdata -> total [ var ] . dia = plotdata -> total [ var ] . mes =
-			plotdata -> total [ var ] . hora = plotdata -> total [ var ] . last = 0 ;
+		plotdata -> total [ var ] . last = 0 ;
 		plotdata -> total [ var ] . lastval = -1 ;
 		Gdata . torequest [ var ] = true ;
 		Gdata . tounlisten [ var ] = false ;
 		Gdata . tolisten [ var ] = true ;
 		sprintf ( plotdata -> total [ var ] . tag , "tag%d" , var ) ;
 		}
-	// EnumWindows( (WNDENUMPROC) & lpfn, 0);
 	}
 
 
@@ -326,6 +372,9 @@ void InitDDE ( PanelData * plotdata ) {
 		}
 	if ( Pserver -> hwnd == NULL ) {
 		sprintf ( plotdata -> res , "Conectando com o servidor..." ) ;
+		if ( Pserver -> type == FIX32_SERVER_TYPE ) {
+			runsrv ( ) ;
+			}
 		connectDDE ( plotdata , Pserver ) ;
 		return ;
 		}
@@ -367,9 +416,9 @@ void UpdateP ( PanelData * plotdata ) {
 	procbuf ( plotdata , Pserver ) ;
 	for ( int var = 0 ; var < NUMVARS ; ++ var ) {
 		SumData * ptot = & plotdata -> total [ var ];		
-		sprintf ( ptot -> chora , "%8.2f" , ptot -> hora ) ;
-		sprintf ( ptot -> cdia , "%8.2f" , ptot -> dia ) ;
-		sprintf ( ptot -> cmes , "%8.2f" , ptot -> mes ) ;
+		sprintf ( ptot -> chora , "%8.0f" , ptot -> hora ) ;
+		sprintf ( ptot -> cdia , "%8.0f" , ptot -> dia ) ;
+		sprintf ( ptot -> cmes , "%8.0f" , ptot -> mes ) ;
 		float lastval = ptot -> lastval ;
 		if ( lastval < 0 ) {
 			sprintf ( ptot -> clastval , " - " ) ;
@@ -379,7 +428,7 @@ void UpdateP ( PanelData * plotdata ) {
 			struct tm * ptime = localtime ( & ptot -> tlastr ) ;
 			sprintf ( ptot -> clastval , "%4.2f" , ptot -> lastval ) ;
 			sprintf ( ptot -> ctlastr , "%02d/%02d/%04d %02d:%02d:%02d" ,
-				ptime -> tm_mday , ptime -> tm_mon , 1900 + ptime -> tm_year , 
+				ptime -> tm_mday , ptime -> tm_mon + 1 , ptime -> tm_year + 1900 ,
 				ptime -> tm_hour , ptime -> tm_min , ptime -> tm_sec ) ;
 			}
 		}
@@ -390,7 +439,6 @@ void UpdateP ( PanelData * plotdata ) {
 	bool fronth , frontd , frontm ;
 	char ctime [ MAX_STRSIZ ] ;
 	checktfront ( & fronth , & frontd , & frontm , ctime ) ;
-	// A ordem do processamento é importante, uma vez que alguns dados são zerados
 	if ( frontm ) {
 		changem ( plotdata , ctime ) ;
 		}
@@ -408,12 +456,23 @@ void UpdateL ( PanelData * plotdata ) {
 // Para ser usado em intervalos longos
 
 	// Verifica se já passou muito tempo desde a última leitura de dados
+	bool terminate = true ;
 	for ( int var = 0 ; var < NUMVARS ; ++ var ) {
 		time_t lastt = plotdata -> total [ var ] . tlastr ;
 		time_t tnow ;
 		time ( & tnow ) ;
 		double interval = difftime_( tnow , lastt ) ;
 		Gdata . tounlisten [ var ] = ( interval > REQUEST_INTERVAL ) ;
+		if ( interval < TERMINATE_INTERVAL ) {
+			terminate = false ;
+			}
+		}
+	if ( terminate ) {
+		const char * msg = "Reiniciando a conexão...";
+		sprintf ( plotdata -> res , msg ) ; 
+		log_( 1 , cerr <<  msg << "\n" ; ) ;
+		endDDE ( plotdata , Pserver ) ;
+		Pserver -> hwnd = 0 ;
 		}
 	}
 
@@ -440,20 +499,21 @@ void changeh ( PanelData * plotdata , char * ctime ) {
 
 	// Grava registro horário
 	FILE * fp = plotdata -> hdfile ;
+	const char * extrmsg = "" ;
 	if ( fp == NULL ) {
 		cerr << "Arquivo de dados horarios nao disponivel.\n" ;
 		return ;
 		}
-	fprintf ( fp , RECFMTWRT , ctime , acuh_(0) , acuh_(1) , acuh_(2) ,
-		acuh_(3) , acuh_(4) , acuh_(5) , acuh_(6) , acuh_(7) , acuh_(8) ) ;
+	fprintf ( fp , RECFMTWRT , ctime , acum_(0) , acum_(1) , acum_(2) ,
+		acum_(3) , acum_(4) , acum_(5) , acum_(6) , acum_(7) , acum_(8) ) ;
 	fflush ( fp ) ;
-/*
-	for ( int var = 0 ; var < NUMVARS ; ++ var ) {
-		acuh_( var ) = 0 ;
+	if ( Gdata . zh ) {
+		for ( int var = 0 ; var < NUMVARS ; ++ var ) {
+			acuh_( var ) = 0 ;
+			}
+		extrmsg = "Dados horarios zerados." ;
 		}
-	cerr << "Dados horarios zerados. " ;
-*/
-	cerr << "Gravou registro horario.\n" ;
+	sprintf ( plotdata -> res , "Gravou registro horario. %s" , extrmsg ) ;
 	}
 	
 
@@ -461,20 +521,21 @@ void changed ( PanelData * plotdata , char * ctime ) {
 // Trata a mudança do dia
 
 	FILE * fp = plotdata -> mdfile ;
+	const char * extrmsg = "" ;
 	if ( fp == NULL ) {
 		cerr << "Arquivo de dados diarios nao disponivel.\n" ;
 		return ;
 		}
-	fprintf ( fp , RECFMTWRT , ctime , acud_(0) , acud_(1) , acud_(2) ,
-		acud_(3) , acud_(4) , acud_(5) , acud_(6) , acud_(7) , acud_(8) ) ;
+	fprintf ( fp , RECFMTWRT , ctime , acum_(0) , acum_(1) , acum_(2) ,
+		acum_(3) , acum_(4) , acum_(5) , acum_(6) , acum_(7) , acum_(8) ) ;
 	fflush ( fp ) ;
-/*
-	for ( int var = 0 ; var < NUMVARS ; ++ var ) {
-		acud_( var ) = 0 ;
+	if ( Gdata . zd ) {
+		for ( int var = 0 ; var < NUMVARS ; ++ var ) {
+			acud_( var ) = 0 ;
+			}
+		extrmsg = "Dados diarios zerados." ;
 		}
-	cerr << "Dados diarios zerados. " ;
-*/
-	cerr << "Gravou registro diario.\n" ;
+	sprintf ( plotdata -> res , "Gravou registro diario. %s" , extrmsg ) ;
 	}
 
 
@@ -484,7 +545,7 @@ void changem ( PanelData * plotdata , char * ctime ) {
 	for ( int var = 0 ; var < NUMVARS ; ++ var ) {
 		acum_( var ) = 0 ;
 		}
-	cerr << "Dados mensais zerados.\n" ;
+	sprintf ( plotdata -> res , "Dados mensais zerados." ) ;
 	}
 	
 #undef acum_
@@ -495,6 +556,7 @@ void changem ( PanelData * plotdata , char * ctime ) {
 void checktfront ( bool * fronth , bool * frontd , bool * frontm , char * ctime ) {
 // Verifica se passou alguma fronteira de tempo
 
+	* fronth = * frontd = * frontm = false ;
 	time_t tnow ;
 	time ( & tnow ) ;
 	struct tm * timenow , * timelast ;
@@ -507,8 +569,10 @@ void checktfront ( bool * fronth , bool * frontd , bool * frontm , char * ctime 
 	int snow = timenow -> tm_sec ;
 	timelast = localtime ( & Gdata . tlast ) ;
 	Gdata . tlast = tnow ;
+	if ( timelast == NULL ) {
+		return ;
+		}
 	if ( timelast -> tm_year < 115 ) {
-		* fronth = * frontd = * frontm = false ;
 		return ;
 		}
 	int hlast = timelast -> tm_hour ;
@@ -518,7 +582,7 @@ void checktfront ( bool * fronth , bool * frontd , bool * frontm , char * ctime 
 	* frontm = ( mlast != mnow ) ;
 	* frontd = ( dlast != dnow ) ;
 	if ( fronth || frontd ) {
-		sprintf ( ctime , RECFMTTIM , ynow + 1900 , mnow , dnow , hnow , inow , snow ) ;
+		sprintf ( ctime , RECFMTTIM , ynow + 1900 , mnow + 1 , dnow , hnow , inow , snow ) ;
 		}
 	}
 
@@ -530,10 +594,10 @@ long connectDDE ( PanelData * plotdata , ServerData * pserver ) {
 	ATOM aapp = GlobalAddAtom ( pserver -> app) ;
 	ATOM atopic = GlobalAddAtom ( pserver -> topic ) ;
 	long res = SendMessage ( (HWND) -1 , WM_DDE_INITIATE , (WPARAM) Gdata . client , MAKELPARAM ( aapp , atopic ) ) ;
-	cerr << "Enviou DDE_INITIATE " << pserver -> app << "|" << pserver -> topic << " res = " << res ;
+	log_( 2 , cerr << "Enviou DDE_INITIATE " << pserver -> app << "|" << pserver -> topic << " res = " << res ; ) ;
 	GlobalDeleteAtom (aapp) ;
 	GlobalDeleteAtom (atopic) ;	
-	cerr << " from " << Gdata . client << " to " << pserver -> hwnd << "\n" ;
+	log_( 2 , cerr << " from " << Gdata . client << " to " << pserver -> hwnd << "\n" ; ) ;
 	return res ;
 	}
 
@@ -559,7 +623,7 @@ long listenDDE ( PanelData * plotdata , ServerData * pserver , int var ) {
 	GlobalUnlock ( hOptions ) ; 
 	long res = PostMessage ( pserver -> hwnd , WM_DDE_ADVISE , ( WPARAM ) Gdata . client ,
 		PackDDElParam ( WM_DDE_ADVISE , ( UINT ) hOptions , atag ) ) ;
-	cerr << "Enviou DDE_ADVISE " << pserver -> tag [ var ] << " res = " << res << "\n" ;
+	log_( 2 , cerr << "Enviou DDE_ADVISE " << pserver -> tag [ var ] << " res = " << res << "\n" ; ) ;
 	GlobalFree ( hOptions ) ; 
 	GlobalDeleteAtom ( atag ) ;
 	return res ;
@@ -572,7 +636,7 @@ long requestDDE ( PanelData * plotdata , ServerData * pserver , int var ) {
 	ATOM atag = GlobalAddAtom ( pserver -> tag [ var ] ) ;
 	long res = PostMessage ( pserver -> hwnd , WM_DDE_REQUEST , ( WPARAM ) Gdata . client ,
 		PackDDElParam ( WM_DDE_REQUEST , CF_TEXT , atag ) ) ;
-	cerr << "Enviou DDE_REQUEST " << pserver -> tag [ var ] << " res = " << res << "\n" ;
+	log_( 2 , cerr << "Enviou DDE_REQUEST " << pserver -> tag [ var ] << " res = " << res << "\n" ; ) ;
 	GlobalDeleteAtom ( atag ) ;
 	return res ;
 	}
@@ -584,8 +648,18 @@ long unlistenDDE ( PanelData * plotdata , ServerData * pserver , int var ) {
 	ATOM atag = GlobalAddAtom ( pserver -> tag [ var ] ) ;
 	long res = PostMessage ( pserver -> hwnd , WM_DDE_UNADVISE , ( WPARAM ) Gdata . client ,
 		PackDDElParam ( WM_DDE_UNADVISE , 0 , atag ) ) ;
-	cerr << "Enviou DDE_UNADVISE " << pserver -> tag [ var ] << " res = " << res << "\n" ;
+	log_( 2 , cerr << "Enviou DDE_UNADVISE " << pserver -> tag [ var ] << " res = " << res << "\n" ; ) ;
 	GlobalDeleteAtom ( atag ) ;
+	return res ;
+	}
+	
+
+long endDDE ( PanelData * plotdata , ServerData * pserver ) {
+// Termina a conexão com o servidor DDE
+
+	long res = PostMessage ( pserver -> hwnd , WM_DDE_TERMINATE , ( WPARAM ) Gdata . client ,
+		PackDDElParam ( WM_DDE_TERMINATE , 0 , 0 ) ) ;
+	log_( 2 , cerr << "Enviou DDE_TERMinaTe res = " << res << "\n" ; ) ;
 	return res ;
 	}
 	
@@ -609,14 +683,14 @@ LRESULT CALLBACK WndProc ( HWND wnd , UINT imsg , WPARAM wparam , LPARAM lparam 
 void receiveACK ( HWND wnd , UINT imsg , WPARAM wparam , LPARAM lparam ) {
 // Trata recebimento de um WM_DDE_ACK
 
-	cerr << "ACK W = " << wparam << ", L = " << lparam ;		
+	log_( 2 , cerr << "ACK W = " << wparam << ", L = " << lparam ; ) ;
 	UINT low , high ;
 	UnpackDDElParam ( WM_DDE_DATA , lparam , & low, & high ) ;
 	FreeDDElParam ( WM_DDE_DATA , lparam ) ;
 	if ( Pserver -> hwnd == NULL ) {
 		// ACK para o WM_DDE_INITIATE (conexão inicial)
 		Pserver -> hwnd = (HWND) wparam ;
-		cerr << "\n" ;
+		log_( 2 , cerr << "\n" ; ) ;
 		return ;
 		}
 	// ACK to WM_DDE_ADVISE (registro para recebimento de dados)
@@ -633,7 +707,7 @@ void receiveACK ( HWND wnd , UINT imsg , WPARAM wparam , LPARAM lparam ) {
 	default :
 		itoa ( low , msg , 16 ) ;
 		}
-	cerr << " " << msg << " high = " << high << ", low = " << low << "\n" ;
+	log_( 2 , cerr << " " << msg << " high = " << high << ", low = " << low << "\n" ; ) ;
 	if ( ack ) {
 		Gdata . tolisten [ Gdata . curvar ] = false ;
 		}
@@ -648,25 +722,21 @@ void receiveDATA ( HWND wnd , UINT imsg , WPARAM wparam , LPARAM lparam ) {
 	
 	time_t tnow ;
 	time ( & tnow ) ;
-	cerr << "DATA W = " << wparam << ", L = " << lparam ;
+	log_( 2 , cerr << "DATA W = " << wparam << ", L = " << lparam ; ) ;
 	UINT low , high ;
 	UnpackDDElParam ( WM_DDE_DATA , lparam , & low, & high ) ;
 	FreeDDElParam (WM_DDE_DATA , lparam ) ;
 	ATOM aitem = ( ATOM ) high ;
 	GLOBALHANDLE hdata = ( GLOBALHANDLE ) low ;
 	DDEDATA FAR* pdata = ( DDEDATA FAR* ) GlobalLock ( hdata ) ;
-	cerr << " = " << high << ", " << low ;
+	log_( 2 , cerr << " = " << high << ", " << low ; ) ;
 	char item [ MAX_STRSIZ ] ;
 	// Se os dados recebidos estiverem no formato esperado, grava-os no buffer
 	if ( pdata -> cfFormat == CF_TEXT ) {
 		GlobalGetAtomName ( aitem , item , sizeof (item) ) ;
 		char val [ MAX_STRSIZ ] ;
-		strcpy ( val , ( const char * ) pdata -> Value ) ;
-		char * nl = strchr ( val , '\r' ) ;
-		if ( nl != NULL ) {
-			* nl = '\0' ;
-			}
-		cerr << " : " << item << ", " << val << " @" << Gdata . posr ;
+		valstrcpy ( val , ( char * ) pdata -> Value ) ;
+		log_( 2 , cerr << " : " << item << ", " << val << " @" << Gdata . posr ; ) ;
 		readDDE ( item , val , tnow ) ;	
 		GlobalDeleteAtom ( aitem ) ;
 		// Envia ACK ao servidor DDE
@@ -685,11 +755,35 @@ void receiveDATA ( HWND wnd , UINT imsg , WPARAM wparam , LPARAM lparam ) {
 		}
 	}
 	
+
+char * valstrcpy ( char * dst , char * src ) {
+// Copia os caracteres de src para dst com alguma sutileza
+
+	char * psrc = src , * pdst = dst , car ;
+	while ( true ) {
+		car = * psrc ++ ;
+		switch ( car ) {
+		case '\r' :
+		case '\n' :
+		case '\0' :
+			* dst = car ;
+			return dst ;
+		case '.' :
+			if ( Gdata . brazil ) {
+				break ;
+				}
+		default :
+			* dst ++ = car ;
+			}
+		}
+		
+	}
+
 	
 void sendACK ( HWND server , ATOM item , bool ack ) {
 // Envia ACK ao servidor
 	PostMessage ( server , WM_DDE_ACK, (WPARAM) Gdata . client , PackDDElParam ( WM_DDE_ACK , DDE_ACK , item ) ) ;
-	cerr << "\t sent " << ( ack ? "ACK" : "NACK" ) << "\n" ;
+	log_( 2 , cerr << "\t sent " << ( ack ? "ACK" : "NACK" ) << "\n" ; ) ;
 	}
 	
 	
@@ -699,7 +793,7 @@ void readDDE ( char * var , char * value , time_t tstamp ) {
 	if ( nvar < 0 ) {
 		nvar = Gdata . curvar ;
 		}
-	cerr << " var " << nvar << "\n" ; 
+	log_( 2 , cerr << " var " << nvar << "\n" ;  ) ;
 	Gdata . torequest [ nvar ] = false ;
 	ReadData * pbuf = & Gdata . buffer [ Gdata . posr ] ;
 	strcpy ( pbuf -> value , value ) ;
@@ -712,22 +806,20 @@ void readDDE ( char * var , char * value , time_t tstamp ) {
 	}
 
 	
-// Não usada nesta revisão	
 BOOL CALLBACK lpfn ( HWND hWnd , int lParam ) {
 // Enumera todas as janelas em busca do servidor DDE
 // Pode ser usada para descobrir o título de uma janela qualquer
 	char title [99] ;
 	int size ;
 	size = GetWindowText ( hWnd , title , 100 ) ;
-	const char * name = Pserver -> name ;
+	static int count = 0 ;
 	if ( size > 0 ) {
-		if ( strcmp ( name , title ) == 0 ) {
-			Pserver -> hwnd = hWnd ;
-			cerr << title << ": " << hWnd << "\n" ;
+		if ( strcmp ( title , WINDOW_TITLE ) == 0 ) {
+			Gdata . duplicated = true ;
+			return false ;
 			}
-		// cerr << title << ": " << hWnd << "\n" ;
 		}
-    return true;
+	return true;
 	}
 
 	
@@ -757,7 +849,7 @@ void procbuf ( PanelData * plotdata , ServerData * pserver ) {
 			if ( var >= 0 ) {
 				char * val = buf [ i ] . value ;
 				value = atof ( val ) ;
-				cerr << "reg. " << i << ", " ;
+				log_( 2 , cerr << "reg. " << i << ", " ; ) ;
 				procvar ( plotdata , pserver , var , value , buf [ i ] . timestamp ) ;
 				plotdata -> total [ var ] . tlastr = buf [ i ] . timestamp ;
 				}
@@ -783,15 +875,15 @@ void procvar ( PanelData * plotdata , ServerData * pserver , int var , float val
 	float last = ptot [ var ] . lastval ;
 	time_t lastt = ptot [ var ] . tlastc ;
 	float area = 0 ;
-	cerr << "var " << var << ": " ;
+	log_( 2 , cerr << "var " << var << ": " ; ) ;
 	if ( last < 0 ) {
-		cerr << "valor " << value << " desprezado. Timestamps = " << lastt << " e " << vtime << "\n" ;
+		log_( 2 , cerr << "valor " << value << " desprezado. Timestamps = " << lastt << " e " << vtime << "\n" ; ) ;
 		}
 	else {
 		// integra
 		int interval = difftime_( vtime , lastt ) ;
 		area = last * interval * pserver -> factor [ var ];
-		cerr << last << " * " << interval << " -> " << area << "\n" ;
+		log_( 2 , cerr << last << " * " << interval << " -> " << area ; ) ;
 		}
 	ptot [ var ] . lastval = value ;
 	ptot [ var ] . last = area ;
@@ -843,7 +935,31 @@ void act_quit ( GtkAction * action , gpointer user_data ) {
 	return ;
 	}
 
-	
+
+void act_openexc ( GtkAction * action , gpointer user_data ) {
+// Trata o evento "opção Abrir selecionada"
+
+	GPid pid ;
+	GError * error = NULL ;
+	gchar * cmd [] = { ( gchar * ) "excel.exe" , ( gchar * ) "ts_rateio_mensal.xls" } ;
+	g_spawn_async ( NULL , cmd , NULL , G_SPAWN_SEARCH_PATH , NULL , NULL , & pid , & error ) ;
+	log_( 1 , cerr << "Tentou partir o Excel, " << ( ( error == NULL ) ? "com" : "sem" ) << " sucesso." ; ) ;
+	return ;
+	}
+
+
+void runsrv ( ) {
+// Trata o evento "opção Abrir selecionada"
+
+	GPid pid ;
+	GError * error = NULL ;
+	gchar * cmd [] = { ( gchar * ) "dmdde.exe" , NULL } ;
+	g_spawn_async ( NULL , cmd , NULL , G_SPAWN_SEARCH_PATH , NULL , NULL , & pid , & error ) ;
+	log_( 1 , cerr << "Tentou partir o DMDDE, " << ( ( error == NULL ) ? "com" : "sem" ) << " sucesso." ; ) ;
+	return ;
+	}
+
+
 void act_exportas ( GtkAction * action , gpointer user_data ) {
 	}
 
@@ -921,9 +1037,6 @@ gboolean userclkoff ( GtkWidget * widget , GdkEvent * event , gpointer user_data
 gboolean userclkon ( GtkWidget * widget , GdkEvent * event , gpointer user_data ) {
 // Trata o evento "botão do mouse pressionado"
 
-	// Atualiza os dados e a tela imediatamente
-	PanelData * plotdata = ( PanelData * ) user_data ;
-	changed ( plotdata , ( char * ) "2015-4-26\n11:21:00" ) ;
 	return false ;
 	}
 
@@ -934,21 +1047,22 @@ void update_txt ( cairo_t * cr , PanelData * plotdata ) {
 	cairo_set_source_rgb ( cr , 0.1 , 0.1 , 0.1 ) ; 
 	cairo_select_font_face ( cr , "Purisa" , CAIRO_FONT_SLANT_NORMAL , CAIRO_FONT_WEIGHT_BOLD ) ;
 	cairo_set_font_size ( cr , 13 ) ;
-	write_at ( cr , 30 , 30 , (char *) "Tag" ) ;
-	write_at ( cr , 90 , 30 , (char *) "Hora" ) ;
-	write_at ( cr , 150 , 30 , (char *) "Dia" ) ;
-	write_at ( cr , 210 , 30 , (char *) "Mes" ) ;
-	write_at ( cr , 270 , 30 , (char *) "Ultima" ) ;
+	write_at ( cr , 30 , 30 , "Tag" ) ;
+	write_at ( cr , 150 , 30 , "Hora" ) ;
+	write_at ( cr , 210 , 30 , "Dia" ) ;
+	write_at ( cr , 270 , 30 , "Mes" ) ;
+	write_at ( cr , 330 , 30 , "Ultima" ) ;
 	SumData * result = plotdata -> total ;
 	for ( int var = 0 ; var < NUMVARS ; ++ var ) {
-		write_at ( cr , 30 , 30 * ( var + 2 ) , result [ var ] . tag ) ;  
-		write_at ( cr , 90 , 30 * ( var + 2 ) , result [ var ] . chora ) ;  
-		write_at ( cr , 150 , 30 * ( var + 2 ) , result [ var ] . cdia ) ;  
-		write_at ( cr , 210 , 30 * ( var + 2 ) , result [ var ] . cmes ) ;
-		write_at ( cr , 270 , 30 * ( var + 2 ) , result [ var ] . clastval ) ;
-		write_at ( cr , 330 , 30 * ( var + 2 ) , result [ var ] . ctlastr ) ;
+		write_at ( cr , 30 , 30 * ( var + 2 ) , Pserver -> nick [ var ] ) ;
+		write_at ( cr , 150 , 30 * ( var + 2 ) , result [ var ] . chora ) ;  
+		write_at ( cr , 210 , 30 * ( var + 2 ) , result [ var ] . cdia ) ;  
+		write_at ( cr , 270 , 30 * ( var + 2 ) , result [ var ] . cmes ) ;
+		write_at ( cr , 330 , 30 * ( var + 2 ) , result [ var ] . clastval ) ;
+		write_at ( cr , 390 , 30 * ( var + 2 ) , result [ var ] . ctlastr ) ;
 		}
-	write_at ( cr , 30 , 350 , plotdata -> res ) ; 
+	gtk_statusbar_push ( GTK_STATUSBAR ( plotdata -> msg ) ,
+		gtk_statusbar_get_context_id ( GTK_STATUSBAR ( plotdata -> msg ) , plotdata -> res ) , plotdata -> res ) ;	
 	}
 
 	
@@ -959,20 +1073,21 @@ gboolean draw ( GtkWidget * widget , cairo_t * cr , gpointer user_data ) {
 	update_txt ( cr , plotdata ) ;
 
 	if ( plotdata -> original -> first ) {
-		cerr << "gtk_window: " << plotdata -> original -> window << "\n" ;
+		log_( 2 , cerr << "gtk_window: " << plotdata -> original -> window << "\n" ; ) ;
 		GdkWindow * gdk_window = gtk_widget_get_window ( plotdata -> original -> window ) ;
-		cerr << "gdk_window: " << gdk_window << "\n" ;
+		log_( 2 , cerr << "gdk_window: " << gdk_window << "\n" ; ) ;
 		if ( gdk_window != NULL ) {
 			gboolean b = gdk_win32_window_is_win32 ( gdk_window ) ;
-			cerr << "is win32: " << b << "\n" ;
+			log_( 2 , cerr << "is win32: " << b << "\n" ; ) ;
 			HWND hwnd = ( HWND ) gdk_win32_window_get_handle ( gdk_window ) ;
-			cerr << "HWND: " << hwnd << "\n" ;
+			log_( 2 , cerr << "HWND: " << hwnd << "\n" ; ) ;
 			plotdata -> original -> hwnd = hwnd ;
 			Gdata . client = hwnd ;
+			SetWindowText ( hwnd , WINDOW_TITLE ) ;
 			Gdata . Oldfn = (WNDPROC) GetWindowLong ( hwnd , GWL_WNDPROC ) ;
-			cerr << "Old proc: " << Gdata . Oldfn << "\n" ;
+			log_( 2 , cerr << "Old proc: " << Gdata . Oldfn << "\n" ; ) ;
 			SetWindowLong ( hwnd , GWL_WNDPROC , (LONG) WndProc ) ;
-			cerr << "New proc: " << WndProc << "\n" ;
+			log_( 2 , cerr << "New proc: " << WndProc << "\n" ; ) ;
 			plotdata -> original -> first = false ;
 			}
 		}
@@ -1009,7 +1124,7 @@ int findvar ( const char * list[] , char * name ) {
 	}
 	
 	
-void write_at ( cairo_t * cr , int x , int y , char * text ) {
+void write_at ( cairo_t * cr , int x , int y , const char * text ) {
 // Escreve na tela
 
 	cairo_move_to ( cr , x , y ) ;
@@ -1045,13 +1160,15 @@ static gboolean ltimeout ( PanelData * plotdata ) {
 void parsecmd (int argc , char * argv [] ) {	
 	int vval = 0 , sval = 0 ;
 	char * zval = NULL , * tval = NULL , * ppos ;
-	bool zh = false , zd = false , te = false , tf = false , nval = false , fval = false ;
+	bool zh = true , zd = true , te = false , tf = false , nval = false , mval = false , bval = false ;
 	char * nlist [ NUMVARS ] , * mlist [ NUMVARS ] ;
-	float flist [ NUMVARS ] ; 
 	int res ;
 	opterr = 0 ;
-	while ( -1 != ( res = getopt ( argc , argv , "v:s:n:m:z:t:" ) ) ) {
+	while ( -1 != ( res = getopt ( argc , argv , "v:s:n:m:z:b:t:" ) ) ) {
 		switch ( res ) {
+		case 'b' :
+			bval = true ;
+			break ;
 		case 'v' :
 			vval = torange ( atoi ( optarg ) , 0 , 3 ) ;
 			break ;
@@ -1074,22 +1191,16 @@ void parsecmd (int argc , char * argv [] ) {
 			for ( int index = 0 ; index < NUMVARS ; ++ index ) {
 				mlist [ index ] = new char [ MAX_STRSIZ ] ;
 				}
-			unlist ( optarg , mlist ) ;
-			for ( int index = 0 ; index < NUMVARS ; ++ index ) {
-				flist [ index ] = atof ( mlist [ index ] ) ;
-				}
-			for ( int index = 0 ; index < NUMVARS ; ++ index ) {
-				free ( mlist [ index ] ) ;
-				}			
-			fval = true ;
+ 			unlist ( optarg , mlist ) ;
+			mval = true ;
 			break ;
 		case 'z' :
 			zval = optarg ;
-			zh = ! strcmp ( zval , "h" ) ;
-			zd = ! strcmp ( zval , "h" ) ;
+			zh = strcmp ( zval , "h" ) ;
+			zd = strcmp ( zval , "d" ) ;
 			break ;
 		case '?' :
-			ppos = strchr ( "vstnmz" , optopt ) ;
+			ppos = strchr ( "vstnmzb" , optopt ) ;
 			if ( ppos != NULL ) {
 				cerr << "Opção '" << optopt << "' requer um argumento.\n" ;
 				}
@@ -1105,26 +1216,26 @@ void parsecmd (int argc , char * argv [] ) {
 			}
 		}
 
-	cerr << "s = " << sval << " , v = " << vval ;
-	cerr << ( ( te || tf ) ? " , t = " : " , " ) << ( tf ? "f, " : "" ) ;
-	cerr << ( te ? "e, " : "" ) << ( zh ? "zh, " : "" ) << ( zd ? "zd, " : "" ) ;
+	log_( 2 , cerr << "s = " << sval << " , v = " << vval << " , b = " << bval ; ) ;
+	log_( 2 , cerr << ( ( te || tf ) ? " , t = " : " , " ) << ( tf ? "f, " : "" ) ; ) ;
+	log_( 2 , cerr << ( te ? "e, " : "" ) << ( zh ? "zh, " : "" ) << ( zd ? "zd, " : "" ) ; ) ;
 	if ( nval ) {
-		cerr << "n = " ;
+		log_( 2 , cerr << "n = " ; ) ;
 		for ( int index = 0 ; index < NUMVARS ; ++ index ) {
-			cerr << nlist [ index ] << ";" ;
+			log_( 2 , cerr << nlist [ index ] << "|" ; ) ;
 			}
-		cerr << " " ;
+		log_( 2 , cerr << " " ; ) ;
 		}
-	if ( fval ) {
-		cerr << "m = " ;
+	if ( mval ) {
+		log_( 2 , cerr << "m = " ; ) ;
 		for ( int index = 0 ; index < NUMVARS ; ++ index ) {
-			cerr << flist [ index ] << ";" ;
+			log_( 2 , cerr << mlist [ index ] << "|" ; ) ;
 			}
-		cerr << " " ;
+		log_( 2 , cerr << "\n" ; ) ;
 		}
 
 	for ( int index = optind ; index < argc ; ++ index ) {
-		cerr << "Non-option argument " << argv [ index ] << ".\n" ;
+		log_( 2 , cerr << "Non-option argument " << argv [ index ] << ".\n" ; ) ;
 		}
 		
 
@@ -1132,14 +1243,17 @@ void parsecmd (int argc , char * argv [] ) {
 	Gdata . zh = zh ;
 	Gdata . serverno = sval ;
 	Gdata . verbose = vval ;
-	if ( nval && fval && ( sval == 3 ) ) {
+	Gdata . brazil = bval ;
+	Gdata . nick = mval ;
+	if ( nval && mval && ( sval == 3 ) ) {
 		Gdata . server . name = ( te ? EXCEL_SERVER_NAME : FIX32_SERVER_NAME ) ;
 		Gdata . server . type = ( te ? EXCEL_SERVER_TYPE : FIX32_SERVER_TYPE ) ;
 		Gdata . server . app = ( te ? EXCEL_APP : FIX32_APP ) ;
 		Gdata . server . topic = ( te ? EXCEL_TOPIC : FIX32_TOPIC ) ;
 		for ( int index = 0 ; index < NUMVARS ; ++ index ) {
 			Gdata . server . tag [ index ]	= nlist [ index ] ;
-			Gdata . server . factor [ index ] = flist [ index ] ;
+			Gdata . server . factor [ index ] = SCALE_FACTOR ;
+			Gdata . server . nick [ index ] = mlist [ index ] ;
 			}
 		Pserver = & Gdata . server ;
 		}
@@ -1160,17 +1274,12 @@ float torange ( float val , float min , float max ) {
 void unlist ( char * list , char * array [] ) {
 	char * ppos , * pbegin = list ;
 	int index = 0 ;
-	while ( true ) {
-		ppos = strchr ( pbegin , ',' ) ;
-		if ( ppos == NULL ) {
-			strcpy ( array [ index ] , pbegin ) ;
-			return ;
-			}
+	while ( NULL != ( ppos = strchr ( pbegin , ',' ) ) ) {
 		strncpy ( array [ index ] , pbegin , ppos - pbegin ) ;
-		array [ index ] [ ppos - pbegin ] = '\0' ;
 		if ( ++ index >= NUMVARS ) {
 			return ;
 			}
 		pbegin = ppos + 1 ;
 		}
+	strcpy ( array [ index ] , pbegin ) ;
 	}

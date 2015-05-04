@@ -1,0 +1,18 @@
+Criação de uma máquina backup:
+1) Instalação do programa:
++ Criar pasta Techsteel em C:\APP\Relat.
++ Copiar arquivos para essa pasta.
+++ gtk-runtime-3.8.1-i686.exe
+++ techsteel.ico
+++ scvr.exe
+++ ts_rateio_mensal.xls
+++ libwinpthread-1.dll
++ Executar o arquivo gtk-runtime-3.8.1-i686.exe e continuar com a instalação default.
+2) Configurar o Windows:
++ Verificar a variável de ambiente PATH, que deve ter incluídos:
+++ C:\Program Files\gtk-3.8.1
+++ 
++ Configurar o agendamento de tarefas para partir o programa c:\APP\Relat\Techsteel\scvr.exe:
+++ na partida do sistema
+++ a cada 10 minutos
+3) Copiar a tela modificada excel.odf para a pasta correta da máquina.
