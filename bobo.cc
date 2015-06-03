@@ -222,7 +222,7 @@ void readData ( PanelData * plotdata ) {
 	FILE * fpm = openDatafile ( plotdata -> mfile , ( void * ) data [1] , & rfail2 ) ;
 	plotdata -> mdfile = fpm ;
 	// Copia os dados lidos para as variáveis globais
-	int ind = ( rfail1 && rfail2 ) ? -1 : ( rfail2 ? 0 : 1 ) ;
+	int ind = ( rfail1 && rfail2 ) ? -1 : ( rfail1 ? 1 : 0 ) ;
 	log_( 2 , cerr << cerr << "readData ind. " << ind << ":" ; ) ;
 	if ( ind >= 0 ) {
 		for ( int var = 0 ; var < NUMVARS ; ++ var ) {
@@ -1048,10 +1048,10 @@ void update_txt ( cairo_t * cr , PanelData * plotdata ) {
 	cairo_select_font_face ( cr , "Purisa" , CAIRO_FONT_SLANT_NORMAL , CAIRO_FONT_WEIGHT_BOLD ) ;
 	cairo_set_font_size ( cr , 13 ) ;
 	write_at ( cr , 30 , 30 , "Tag" ) ;
-	write_at ( cr , 150 , 30 , "Hora" ) ;
-	write_at ( cr , 210 , 30 , "Dia" ) ;
-	write_at ( cr , 270 , 30 , "Mes" ) ;
-	write_at ( cr , 330 , 30 , "Ultima" ) ;
+	write_at ( cr , 150 , 30 , "m3 hora" ) ;
+	write_at ( cr , 210 , 30 , "m3 dia" ) ;
+	write_at ( cr , 270 , 30 , "m3 mes" ) ;
+	write_at ( cr , 330 , 30 , "m3/h atual" ) ;
 	SumData * result = plotdata -> total ;
 	for ( int var = 0 ; var < NUMVARS ; ++ var ) {
 		write_at ( cr , 30 , 30 * ( var + 2 ) , Pserver -> nick [ var ] ) ;
