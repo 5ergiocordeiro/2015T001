@@ -1,18 +1,182 @@
-﻿Build started 09/11/2015 15:43:04.
+﻿Build started 09/11/2015 20:47:07.
      1>Project "C:\Users\ASUS.1\Documents\Visual Studio 2013\Projects\scvropc\scvropc\scvropc.vcxproj" on node 2 (Build target(s)).
      1>ClCompile:
          C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\CL.exe /c /IInclude /AI"C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.0" /AI"C:\Program Files (x86)\Windows Kits\8.1\References\CommonConfiguration\Neutral" /Zi /clr /nologo /W3 /WX- /Od /Oy- /D UNICODE /D WIN32_DCOM /D WIN32 /D _DEBUG /D _CONSOLE /D _LIB /D _UNICODE /D UNICODE /Gm- /EHa /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo"Debug\\" /Fd"Debug\vc120.pdb" /Gd /TP /FU"C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.0\mscorlib.dll" /FU"C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.0\System.Data.dll" /FU"C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.0\System.dll" /FU"C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.0\System.Drawing.dll" /FU"C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.0\System.Windows.Forms.dll" /FU"C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.0\System.Xml.dll" /analyze- /errorReport:prompt /clr:nostdlib MyForm.cpp
          MyForm.cpp
-     1>MyForm.cpp(12): warning C4551: function call missing argument list
-       Link:
-         C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"C:\Users\ASUS.1\Documents\Visual Studio 2013\Projects\scvropc\Debug\scvropc.exe" /INCREMENTAL /NOLOGO ole32.lib RpcRT4.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /ASSEMBLYRESOURCE:Debug\scvropc.MyForm.resources /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"C:\Users\ASUS.1\Documents\Visual Studio 2013\Projects\scvropc\Debug\scvropc.pdb" /SUBSYSTEM:WINDOWS /TLBID:1 /ENTRY:"main" /DYNAMICBASE /NXCOMPAT /IMPLIB:"C:\Users\ASUS.1\Documents\Visual Studio 2013\Projects\scvropc\Debug\scvropc.lib" /MACHINE:X86 Debug\scvropc.res
-         Debug\MyForm.obj
-         Debug\OPC_i.obj
-         Debug\scvropc.obj
-         Debug\stdafx.obj
-         scvropc.vcxproj -> C:\Users\ASUS.1\Documents\Visual Studio 2013\Projects\scvropc\Debug\scvropc.exe
-     1>Done Building Project "C:\Users\ASUS.1\Documents\Visual Studio 2013\Projects\scvropc\scvropc\scvropc.vcxproj" (Build target(s)).
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(89): error C2146: syntax error : missing ';' before identifier 'WINAPI'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(89): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(89): error C2146: syntax error : missing ';' before identifier 'K32EnumProcesses'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(90): error C2065: 'cb' : undeclared identifier
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(90): error C3861: '_Out_writes_bytes_': identifier not found
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(90): error C2146: syntax error : missing ')' before identifier 'DWORD'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(90): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(93): error C2059: syntax error : ')'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(97): error C2146: syntax error : missing ';' before identifier 'WINAPI'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(97): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(97): error C2086: 'int BOOL' : redefinition
+                 C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(88) : see declaration of 'BOOL'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(97): error C2146: syntax error : missing ';' before identifier 'K32EnumProcessModules'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(97): error C2086: 'int WINAPI' : redefinition
+                 C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(89) : see declaration of 'WINAPI'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(98): error C2065: '_In_' : undeclared identifier
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(98): error C2146: syntax error : missing ')' before identifier 'HANDLE'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(98): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(102): error C2059: syntax error : ')'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(106): error C2146: syntax error : missing ';' before identifier 'WINAPI'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(106): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(106): error C2086: 'int BOOL' : redefinition
+                 C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(88) : see declaration of 'BOOL'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(106): error C2146: syntax error : missing ';' before identifier 'K32EnumProcessModulesEx'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(106): error C2086: 'int WINAPI' : redefinition
+                 C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(89) : see declaration of 'WINAPI'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(107): error C2065: '_In_' : undeclared identifier
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(107): error C2146: syntax error : missing ')' before identifier 'HANDLE'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(107): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(112): error C2059: syntax error : ')'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(116): error C2146: syntax error : missing ';' before identifier 'WINAPI'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(116): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(116): error C2146: syntax error : missing ';' before identifier 'K32GetModuleBaseNameA'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(116): error C2086: 'int WINAPI' : redefinition
+                 C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(89) : see declaration of 'WINAPI'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(117): error C2065: '_In_' : undeclared identifier
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(117): error C2146: syntax error : missing ')' before identifier 'HANDLE'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(117): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(121): error C2059: syntax error : ')'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(125): error C2146: syntax error : missing ';' before identifier 'WINAPI'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(125): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(125): error C2086: 'int DWORD' : redefinition
+                 C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(115) : see declaration of 'DWORD'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(125): error C2146: syntax error : missing ';' before identifier 'K32GetModuleBaseNameW'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(125): error C2086: 'int WINAPI' : redefinition
+                 C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(89) : see declaration of 'WINAPI'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(126): error C2065: '_In_' : undeclared identifier
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(126): error C2146: syntax error : missing ')' before identifier 'HANDLE'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(126): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(130): error C2059: syntax error : ')'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(139): error C2059: syntax error : 'return'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(152): error C2059: syntax error : 'return'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(173): error C2146: syntax error : missing ';' before identifier 'lpBaseOfDll'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(173): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(174): error C2146: syntax error : missing ';' before identifier 'SizeOfImage'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(174): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(175): error C2146: syntax error : missing ';' before identifier 'EntryPoint'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(175): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(181): error C2146: syntax error : missing ';' before identifier 'WINAPI'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(181): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(181): error C2086: 'int BOOL' : redefinition
+                 C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(88) : see declaration of 'BOOL'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(181): error C2146: syntax error : missing ';' before identifier 'K32GetModuleInformation'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(181): error C2086: 'int WINAPI' : redefinition
+                 C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(89) : see declaration of 'WINAPI'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(182): error C2065: '_In_' : undeclared identifier
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(182): error C2146: syntax error : missing ')' before identifier 'HANDLE'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(182): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(186): error C2059: syntax error : ')'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(191): error C2146: syntax error : missing ';' before identifier 'WINAPI'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(191): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(191): error C2086: 'int BOOL' : redefinition
+                 C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(88) : see declaration of 'BOOL'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(191): error C2146: syntax error : missing ';' before identifier 'K32EmptyWorkingSet'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(191): error C2086: 'int WINAPI' : redefinition
+                 C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(89) : see declaration of 'WINAPI'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(192): error C2065: '_In_' : undeclared identifier
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(192): error C2146: syntax error : missing ')' before identifier 'HANDLE'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(192): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(193): error C2059: syntax error : ')'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(206): error C2146: syntax error : missing ';' before identifier 'Flags'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(206): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(208): error C2146: syntax error : missing ';' before identifier 'Protection'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(208): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(208): error C2143: syntax error : missing ';' before ':'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(208): error C2334: unexpected token(s) preceding ':'; skipping apparent function body
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(221): error C2146: syntax error : missing ';' before identifier 'NumberOfEntries'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(221): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(222): error C2146: syntax error : missing ';' before identifier 'WorkingSetInfo'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(222): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(226): error C2146: syntax error : missing ';' before identifier 'Flags'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(226): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(229): error C2146: syntax error : missing ';' before identifier 'Valid'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(229): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(229): error C2143: syntax error : missing ';' before ':'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(229): error C2334: unexpected token(s) preceding ':'; skipping apparent function body
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(244): error C2146: syntax error : missing ';' before identifier 'Valid'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(244): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(244): error C2143: syntax error : missing ';' before ':'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(244): error C2334: unexpected token(s) preceding ':'; skipping apparent function body
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(253): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(258): error C2146: syntax error : missing ';' before identifier 'VirtualAddress'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(258): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(259): error C2146: syntax error : missing ';' before identifier 'VirtualAttributes'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(259): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(271): error C2146: syntax error : missing ';' before identifier 'WINAPI'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(271): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(271): error C2146: syntax error : missing ';' before identifier 'K32QueryWorkingSet'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(272): error C2061: syntax error : identifier '_In_'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(275): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(275): warning C4183: 'K32QueryWorkingSet': missing return type; assumed to be a member function returning 'int'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(279): error C2146: syntax error : missing ';' before identifier 'WINAPI'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(279): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(279): error C2146: syntax error : missing ';' before identifier 'K32QueryWorkingSetEx'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(280): error C2061: syntax error : identifier '_In_'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(283): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(283): warning C4183: 'K32QueryWorkingSetEx': missing return type; assumed to be a member function returning 'int'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(287): error C2146: syntax error : missing ';' before identifier 'WINAPI'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(287): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(287): error C2146: syntax error : missing ';' before identifier 'K32InitializeProcessForWsWatch'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(288): error C2061: syntax error : identifier '_In_'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(289): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(289): warning C4183: 'K32InitializeProcessForWsWatch': missing return type; assumed to be a member function returning 'int'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(292): error C2146: syntax error : missing ';' before identifier 'FaultingPc'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(292): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(293): error C2146: syntax error : missing ';' before identifier 'FaultingVa'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(293): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(298): error C2146: syntax error : missing ';' before identifier 'FaultingThreadId'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(298): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(299): error C2146: syntax error : missing ';' before identifier 'Flags'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(299): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(304): error C2146: syntax error : missing ';' before identifier 'WINAPI'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(304): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(304): error C2146: syntax error : missing ';' before identifier 'K32GetWsChanges'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(305): error C2061: syntax error : identifier '_In_'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(308): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(308): warning C4183: 'K32GetWsChanges': missing return type; assumed to be a member function returning 'int'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(312): error C2146: syntax error : missing ';' before identifier 'WINAPI'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(312): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(312): error C2146: syntax error : missing ';' before identifier 'K32GetWsChangesEx'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(313): error C2061: syntax error : identifier '_In_'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(316): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(316): warning C4183: 'K32GetWsChangesEx': missing return type; assumed to be a member function returning 'int'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(320): error C2146: syntax error : missing ';' before identifier 'WINAPI'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(320): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(320): error C2146: syntax error : missing ';' before identifier 'K32GetMappedFileNameW'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(321): error C2061: syntax error : identifier '_In_'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(325): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(325): warning C4183: 'K32GetMappedFileNameW': missing return type; assumed to be a member function returning 'int'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(329): error C2146: syntax error : missing ';' before identifier 'WINAPI'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(329): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(329): error C2146: syntax error : missing ';' before identifier 'K32GetMappedFileNameA'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(330): error C2061: syntax error : identifier '_In_'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(334): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(334): warning C4183: 'K32GetMappedFileNameA': missing return type; assumed to be a member function returning 'int'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(344): error C2146: syntax error : missing ';' before identifier 'WINAPI'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(344): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(344): error C2146: syntax error : missing ';' before identifier 'K32EnumDeviceDrivers'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(345): error C2061: syntax error : identifier '_Out_writes_bytes_'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(348): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(348): warning C4183: 'K32EnumDeviceDrivers': missing return type; assumed to be a member function returning 'int'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(353): error C2146: syntax error : missing ';' before identifier 'WINAPI'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(353): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(353): error C2146: syntax error : missing ';' before identifier 'K32GetDeviceDriverBaseNameA'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(354): error C2061: syntax error : identifier '_In_'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(357): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(357): warning C4183: 'K32GetDeviceDriverBaseNameA': missing return type; assumed to be a member function returning 'int'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(361): error C2146: syntax error : missing ';' before identifier 'WINAPI'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(361): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(361): error C2146: syntax error : missing ';' before identifier 'K32GetDeviceDriverBaseNameW'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(362): error C2061: syntax error : identifier '_In_'
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\psapi.h(362): fatal error C1003: error count exceeds 100; stopping compilation
+     1>Done Building Project "C:\Users\ASUS.1\Documents\Visual Studio 2013\Projects\scvropc\scvropc\scvropc.vcxproj" (Build target(s)) -- FAILED.
 
-Build succeeded.
+Build FAILED.
 
-Time Elapsed 00:00:00.95
+Time Elapsed 00:00:00.37
