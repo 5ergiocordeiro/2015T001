@@ -2,15 +2,15 @@
 #define SIMPLE_OPC_CLIENT_H
 
 #define MAX_ITEMS 9
+#define DEFAULT_VERBOSE 3
 
 typedef struct MyOPCItemInfo {
 	LPWSTR nome;
 	VARTYPE tipo;
-};
+	};
 typedef struct MyOPCItemData {
-	float valor;
-	bool ok;
-};
+	double factor;
+	};
 typedef struct MyOPCServerInfo {
 	bool inicializado;
 	IOPCServer * pServer;
@@ -19,28 +19,9 @@ typedef struct MyOPCServerInfo {
 	int numitems;
 	MyOPCItemInfo iteminfo[MAX_ITEMS];
 	MyOPCItemData itemdata[MAX_ITEMS];
-};
+	};
 
 // Constants
-// widgets
-const int SEPARATION = 5;
-const int BUTTONWIDTH = 80;
-const int BUTTONHEIGHT = 35;
-const int CTRLBARWIDTH = 0; // BUTTONWIDTH + 2 * SEPARATION ;
-const int CTRLBARHEIGHT = 0;
-const int STATBARWIDTH = 500;
-const int STATBARHEIGHT = 30;
-const int WINDOWBORDER = 5;
-const int STATUSMSGSZ = 200;
-const int MENUHEIGHT = 30;
-const int POINTRADIUS = 10;
-const int PLOTAREAHEIGTH = 320;
-const int PLOTAREAWIDTH = 520;
-
-const int DRAWAREAWIDTH = 520;
-const int MAXDRAWAREA = 1;
-
-const int NUMVARS = 9;
 const int BUFFSIZE = 1000;
 const int QUALITY_GOOD = 192;
 const char * EXCEL_SERVER_NAME = "Microsoft Excel - dde.xls";
@@ -93,36 +74,22 @@ typedef struct {
 } SumData;
 
 typedef struct {
-	int var;
-	char value[MAX_STRSIZ];
-	int quality;
 	time_t timestamp;
+	double value, hora, dia, mes;
 } ReadData;
 
 typedef struct {
-	SumData total[NUMVARS];
 	char res[MAX_STRSIZ], hfile[MAX_STRSIZ], mfile[MAX_STRSIZ];
 	FILE * hdfile, *mdfile;
 } PanelData;
 
-typedef	struct {
-	const char * name, *type;
-	const char * app, *topic, *tag[NUMVARS], *nick[NUMVARS];
-	float factor[NUMVARS];
-	bool enabled;
-} ServerData;
 
 typedef struct {
-	ReadData buffer[BUFFSIZE];
-	int posr, posw;
-	int curvar;
 	time_t tlast;
-	bool torequest[NUMVARS], tolisten[NUMVARS], tounlisten[NUMVARS];
-	bool zd, zh, brazil, nick;
-	int serverno, verbose;
-	ServerData server;
-	bool duplicated;
-} GlobalData;
+	int verbose;
+	bool duplicated, zh, zd;
+	ReadData current[MAX_ITEMS];
+	} GlobalData;
 
 
 
@@ -136,8 +103,6 @@ typedef struct {
 // Prototypes
 // Initialization
 int parseinput(int argc, char * * argv, int & width, int & height, double & minx, double & maxx, double & miny, double & maxy, int & maxiters, int & hue, double & saturation, bool & showMP);
-void totalize(int var, float val);
-void procbuf(PanelData * plotdata, ServerData * pserver);
 int findvar(const char * list[], char * name);
 bool fexists(char * fname);
 void readData(PanelData * plotdata);
@@ -147,17 +112,9 @@ void changem(PanelData * plotdata, char * ctime);
 void changed(PanelData * plotdata, char * ctime);
 void changeh(PanelData * plotdata, char * ctime);
 void checktfront(bool * fronth, bool * frontd, bool * frontm, char * ctime);
-void totalize(PanelData * plotdata, int var, float val);
-void procvar(PanelData * plotdata, ServerData * pserver, int var, float value, time_t vtime);
-float torange(float val, float min, float max);
-void parsecmd(int argc, char * argv[]);
-void unlist(char * list, char * array[]);
-char * valstrcpy(char * dst, char * src);
-int mysplit(char * str, char car, char * dst, int siz);
 void runsrv(void);
-long endDDE(PanelData * plotdata, ServerData * pserver);
-
-
+int mysplit(char * str, char car, char * dst, int siz);
+BOOL CALLBACK lpfn(HWND hWnd, int lParam);
 IOPCServer* InstantiateServer(wchar_t ServerName[]);
 IOPCItemMgt * AddTheGroup(IOPCServer * pIOPCServer, LPWSTR Groupname, OPCHANDLE & hServerGroup);
 OPCHANDLE AddTheItem(IOPCItemMgt* pIOPCItemMgt, LPWSTR ItemID, VARTYPE ItemType);
@@ -169,5 +126,6 @@ void EndOPC(void);
 int RunOPC(void);
 double ReadTheItem(int item);
 void ReadAllItems(double * pval);
-
+int InitData(void);
+int readCfg(void);
 #endif

@@ -37,9 +37,9 @@ namespace scvropc {
 			}
 		void enbupd(void) {
 			this -> timer1 -> Enabled = true;
-			this -> timer1 -> Enabled = true;
-			this -> timer1 -> Enabled = true;
-		}
+			this -> timer2 -> Enabled = true;
+			this -> timer3 -> Enabled = true;
+			}
 	protected:
 		/// <summary>
 		/// Clean up any resources being used.
@@ -119,6 +119,10 @@ namespace scvropc {
 			this->button1->UseVisualStyleBackColor = true;
 			this->button1->Click += gcnew System::EventHandler(this, &MyForm::button1_Click);
 			// 
+			// timer2
+			// 
+			this->timer2->Tick += gcnew System::EventHandler(this, &MyForm::timer2_Tick);
+			// 
 			// MyForm
 			// 
 			this->AutoScaleDimensions = System::Drawing::SizeF(6, 13);
@@ -137,12 +141,19 @@ namespace scvropc {
 		}
 #pragma endregion
 	private: System::Void timer1_Tick(System::Object^  sender, System::EventArgs^  e) {
+		// Lê dados do servidor OPC
 		static double varValue[3];
 		ReadAllItems(varValue);
 		this -> MyRefresh(varValue[0], varValue[1], varValue[2]);
 		}
 	private: System::Void button1_Click(System::Object^  sender, System::EventArgs^  e) {
 		this -> Close();
+		}
+	private: System::Void timer2_Tick(System::Object^  sender, System::EventArgs^  e) {
+		// Lê dados do servidor OPC
+		static double varValue[3];
+		ReadAllItems(varValue);
+		this->MyRefresh(varValue[0], varValue[1], varValue[2]);
 		}
 	};
 }
