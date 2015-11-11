@@ -66,14 +66,6 @@ typedef enum { PSERVER, TSERVER1, TSERVER2 } TServer;
 typedef enum { FGETLAST_OK, FGETLAST_ERROPEN, FGETLAST_ERRSEEK, FGETLAST_ERRREAD } GetlastRes;
 
 typedef struct {
-	char chora[MAX_STRSIZ], cdia[MAX_STRSIZ], cmes[MAX_STRSIZ],
-		clastval[MAX_STRSIZ], ctlastr[MAX_STRSIZ];
-	float hora, dia, mes, last, lastval;
-	char tag[MAX_STRSIZ];
-	time_t tlastc, tlastr;
-} SumData;
-
-typedef struct {
 	time_t timestamp;
 	double value, hora, dia, mes;
 } ReadData;
@@ -83,12 +75,12 @@ typedef struct {
 	FILE * hdfile, *mdfile;
 } PanelData;
 
-
 typedef struct {
 	time_t tlast;
 	int verbose;
 	bool duplicated, zh, zd;
 	ReadData current[MAX_ITEMS];
+	PanelData plotdata;
 	} GlobalData;
 
 

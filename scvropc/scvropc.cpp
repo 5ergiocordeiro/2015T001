@@ -172,13 +172,18 @@ double ReadTheItem(int item) {
 	pdata -> hora += area;
 	pdata -> dia += area;
 	pdata -> mes += area;
-	Gdata.tlast = tnow;
 	return last;
 	}
 
-void ReadAllItems(double * pval) {
-	for (int i = 0; i < ServerInfo.numitems; ++i) {
+void ReadAllItems(double * pval, char ptime[][50]) {
+	for (int i = 0; i < ServerInfo.numitems; ++ i) {
 		* pval ++ = ReadTheItem(i);
+		}
+	char buf[50];
+	for (int i = 0; i < ServerInfo.numitems; ++ i) {
+		tm * tp = localtime(& Gdata.current[i].timestamp);
+		strftime(buf, 50, "%H:%M:%S %d/%m/%Y", tp);
+		strcpy(ptime[i], buf);
 		}
 	}
 
@@ -375,10 +380,10 @@ int mysplit(char * str, char car, char * dst, int siz) {
 #define acud_( var ) 	( Gdata.current[ var ].dia )
 #define acuh_( var ) 	( Gdata.current[ var ].hora )
 
-void changeh(PanelData * plotdata, char * ctime) {
+void changeh(char * ctime) {
 // Trata a mudança da hora
 	// Grava registro horário
-	FILE * fp = plotdata->hdfile;
+	FILE * fp = Gdata.plotdata.hdfile;
 	const char * extrmsg = "";
 	if (fp == NULL) {
 		cerr << "Arquivo de dados horarios nao disponivel.\n";
@@ -393,12 +398,12 @@ void changeh(PanelData * plotdata, char * ctime) {
 			}
 		extrmsg = "Dados horarios zerados.";
 		}
-	sprintf(plotdata->res, "Gravou registro horario. %s", extrmsg);
+	sprintf(Gdata.plotdata.res, "Gravou registro horario. %s", extrmsg);
 	}
 
-void changed(PanelData * plotdata, char * ctime) {
+void changed(char * ctime) {
 // Trata a mudança do dia
-	FILE * fp = plotdata->mdfile;
+	FILE * fp = Gdata.plotdata.mdfile;
 	const char * extrmsg = "";
 	if (fp == NULL) {
 		cerr << "Arquivo de dados diarios nao disponivel.\n";
@@ -413,15 +418,15 @@ void changed(PanelData * plotdata, char * ctime) {
 			}
 		extrmsg = "Dados diarios zerados.";
 		}
-	sprintf(plotdata->res, "Gravou registro diario. %s", extrmsg);
+	sprintf(Gdata.plotdata.res, "Gravou registro diario. %s", extrmsg);
 	}
 
-void changem(PanelData * plotdata, char * ctime) {
+void changem(char * ctime) {
 // Trata a mudança do mês
 	for (int var = 0; var < MAX_ITEMS; ++var) {
 		acum_(var) = 0;
 		}
-	sprintf(plotdata->res, "Dados mensais zerados.");
+	sprintf(Gdata.plotdata.res, "Dados mensais zerados.");
 	}
 
 #undef acum_
@@ -434,19 +439,19 @@ void checktfront(bool * fronth, bool * frontd, bool * frontm, char * ctime) {
 	time_t tnow;
 	time(& tnow);
 	struct tm * timenow, *timelast;
-	timenow = localtime(&tnow);
-	int ynow = timenow->tm_year;
-	int mnow = timenow->tm_mon;
-	int dnow = timenow->tm_mday;
-	int hnow = timenow->tm_hour;
-	int inow = timenow->tm_min;
-	int snow = timenow->tm_sec;
-	timelast = localtime(&Gdata.tlast);
+	timenow = localtime(& tnow);
+	int ynow = timenow-> tm_year;
+	int mnow = timenow-> tm_mon;
+	int dnow = timenow-> tm_mday;
+	int hnow = timenow-> tm_hour;
+	int inow = timenow-> tm_min;
+	int snow = timenow-> tm_sec;
+	timelast = localtime(& Gdata.tlast);
 	Gdata.tlast = tnow;
 	if (timelast == NULL) {
 		return;
 		}
-	if (timelast-> tm_year < 115) {
+	if (timelast -> tm_year < 115) {
 		return;
 		}
 	int hlast = timelast -> tm_hour;
@@ -455,7 +460,7 @@ void checktfront(bool * fronth, bool * frontd, bool * frontm, char * ctime) {
 	*fronth = (hlast != hnow);
 	*frontm = (mlast != mnow);
 	*frontd = (dlast != dnow);
-	if (fronth || frontd) {
+	if (* fronth || * frontd) {
 		sprintf(ctime, RECFMTTIM, ynow + 1900, mnow + 1, dnow, hnow, inow, snow);
 		}
 	}
@@ -463,20 +468,28 @@ void checktfront(bool * fronth, bool * frontd, bool * frontm, char * ctime) {
 int InitData(void) {
 // Inicializa as variáveis globais
 	Gdata.duplicated = false;
+	Gdata.zh = Gdata.zd = true;
 	Gdata.verbose = DEFAULT_VERBOSE;
+/*
 	EnumWindows((WNDENUMPROC) & lpfn, 0);
 	if (Gdata.duplicated) {
 		cerr << "Duplicado!";
 		return 1;
 		}
+*/
 	// Lê os arquivos de configuração
 	int retcode = readCfg();
 	if (retcode != 0) {
 		return retcode;
 		}
 	// Lê os últimos dados salvos
-	PanelData pdata;
-	readData(& pdata);
+	PanelData * pdata = &Gdata.plotdata;
+	readData(pdata);
+	time_t tnow;
+	time(&tnow);
+	for (int i = 0; i < MAX_ITEMS; ++i) {
+		Gdata.current[i].timestamp = tnow;
+		}
 	// Conecta-se ao servidor OPC
 	retcode = InitOPC();
 	if (retcode != 0) {
@@ -487,6 +500,9 @@ int InitData(void) {
 
 int readCfg(void) {
 // Lê a configuração em disco
+	for (int i = 0; i < MAX_ITEMS; ++i) {
+		ServerInfo.itemdata[i].factor = 1e-3;
+		}
 	return 0;
 	}
 
@@ -504,4 +520,28 @@ BOOL CALLBACK lpfn ( HWND hWnd , int lParam ) {
 			}
 		}
 	return true;
+	}
+
+void ReadAcum(double * pval) {
+	for (int i = 0; i < MAX_ITEMS; ++i) {
+		*pval++ = Gdata.current[i].hora;
+		}
+	for (int i = 0; i < MAX_ITEMS; ++i) {
+		*pval++ = Gdata.current[i].dia;
+		}
+	for (int i = 0; i < MAX_ITEMS; ++i) {
+		*pval++ = Gdata.current[i].mes;
+		}
+	bool fronth, frontd, frontm;
+	char ctime[MAX_STRSIZ];
+	checktfront(&fronth, &frontd, &frontm, ctime);
+	if (frontm) {
+		changem(ctime);
+		}
+	if (frontd) {
+		changed(ctime);
+		}
+	if (fronth) {
+		changeh(ctime);
+		}
 	}
