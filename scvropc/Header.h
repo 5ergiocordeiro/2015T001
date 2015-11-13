@@ -7,6 +7,7 @@
 typedef struct MyOPCItemInfo {
 	LPWSTR nome;
 	VARTYPE tipo;
+	char * tag;
 	};
 typedef struct MyOPCItemData {
 	double factor;
@@ -24,18 +25,7 @@ typedef struct MyOPCServerInfo {
 // Constants
 const int BUFFSIZE = 1000;
 const int QUALITY_GOOD = 192;
-const char * EXCEL_SERVER_NAME = "Microsoft Excel - dde.xls";
-const char * FIX32_SERVER_NAME = "FIX DDE Server";
-const char * EXCEL_SERVER_TYPE = "Excel";
-const char * FIX32_SERVER_TYPE = "Fix32";
-const char * EXCEL_APP = "Excel";
-const char * FIX32_APP = "DMDDE";
-const char * EXCEL_TOPIC = "[dde.xls]Sheet1";
-const char * FIX32_TOPIC = "DATA";
-
 const int NUMSERVERS = 3;
-const UINT DDE_NACK = 0;
-const UINT DDE_ACK = 0x8000;
 const int MAX_STRSIZ = 50;
 const int PROC_INTERVAL = 10;
 const int PROC_SINTERVAL = 1;

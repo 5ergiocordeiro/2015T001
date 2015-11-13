@@ -8,15 +8,21 @@
 using namespace std;
 
 #define OPC_MATRIKON L"Matrikon.OPC.Simulation.1"
-#define OPC_SERVER_NAME OPC_MATRIKON
+#define OPC_iFIXClient L"Intellution.iFixOPCClient"
+#define OPC_iFIXDB L"Intellution.OPCiFIX.1"
+#define OPC_SIMATIC L"OPC.SimaticNET.1"
+#define OPC_SERVER_NAME OPC_SIMATIC
 //#define REMOTE_SERVER_NAME L"your_path"
 
 MyOPCServerInfo ServerInfo = {
 		FALSE, NULL, 0, { 0, 0, 0, 0, 0, 0, 0, 0, 0 }, NULL, 3,
 		{
-			{ L"Random.Real8", VT_R8 }, { L"Saw-toothed Waves.Real8", VT_R8 }, { L"Square Waves.Real8", VT_R8 },
+			// { L"Random.Real8", VT_R8 }, { L"Saw-toothed Waves.Real8", VT_R8 }, { L"Square Waves.Real8", VT_R8 },
+			// { L"CUT3;ANALOG;S7:[CUT3]DB20,REAL0,1", VT_R8 }, { L"CUT3;ANALOG;S7:[CUT3]DB17,REAL12,1", VT_R8 }, { L"CUT3;ANALOG;S7:[CUT3]DB17.REAL32,1", VT_R8 },
+			{ L"S7:[SUB3A18]DB20,REAL14,1", VT_R8, "FT01_UE" }, { L"S7:[SUB3A18]DB20,REAL18,1", VT_R8, "FT02_UE" }, { L"S7:[SUB3A18]DB20, REAL22, 1", VT_R8, "FT03_UE" },
 			{}, {}, {}, {}, {}, {},
 		},
+		{ SCALE_FACTOR, SCALE_FACTOR, SCALE_FACTOR },
 	};
 GlobalData Gdata;
 
@@ -73,7 +79,7 @@ int InitOPC(void) {
 	for (int i = 0; i < ServerInfo.numitems; ++i) {
 		hServerItem = AddTheItem(pIOPCItemMgt, ServerInfo.iteminfo[i].nome, ServerInfo.iteminfo[i].tipo);
 		if (hServerItem == 0) {
-			cout << "Erro ao criar o item " << i << ": " << ServerInfo.iteminfo[i].nome << "." << endl;
+			cout << "Erro ao criar o item " << i << ": " << * ServerInfo.iteminfo[i].nome << "." << endl;
 			return 1;
 			}
 		ServerInfo.hItem[i] = hServerItem;
@@ -162,6 +168,7 @@ double ReadTheItem(int item) {
 	ReadData * pdata = & Gdata.current[item];
 	time_t lastt = pdata -> timestamp;
 	double last = varValue.dblVal;
+	log_(3, cerr << "item " << item << " = " << last << " (Timestamp = " << tnow << ")\n";);
 	if (last < 0) {
 		log_(2, cerr << "valor " << last << " desprezado. Timestamps = " << lastt << " e " << tnow << "\n";);
 		}
