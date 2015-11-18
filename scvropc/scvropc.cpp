@@ -5,24 +5,29 @@
 #include "opc_h.h"
 #include "header.h"
 
+#include <direct.h>
+
 using namespace std;
 
-#define OPC_MATRIKON L"Matrikon.OPC.Simulation.1"
-#define OPC_iFIXClient L"Intellution.iFixOPCClient"
-#define OPC_iFIXDB L"Intellution.OPCiFIX.1"
-#define OPC_SIMATIC L"OPC.SimaticNET.1"
+#define OPC_MATRIKON "Matrikon.OPC.Simulation.1"
+#define OPC_iFIXClient "Intellution.iFixOPCClient"
+#define OPC_iFIXDB "Intellution.OPCiFIX.1"
+#define OPC_SIMATIC "OPC.SimaticNET.1"
 #define OPC_SERVER_NAME OPC_SIMATIC
 //#define REMOTE_SERVER_NAME L"your_path"
 
 MyOPCServerInfo ServerInfo = {
-		FALSE, NULL, 0, { 0, 0, 0, 0, 0, 0, 0, 0, 0 }, NULL, 3,
+		"", FALSE, NULL, 0, { 0, 0, 0, 0, 0, 0, 0, 0, 0 }, NULL, 3,
 		{
-			// { L"Random.Real8", VT_R8 }, { L"Saw-toothed Waves.Real8", VT_R8 }, { L"Square Waves.Real8", VT_R8 },
+			// { L"Random.Real8", VT_R8, "Random" }, { L"Saw-toothed Waves.Real8", VT_R8, "Waves" }, { L"Square Waves.Real8", VT_R8, "Real8" },
 			// { L"CUT3;ANALOG;S7:[CUT3]DB20,REAL0,1", VT_R8 }, { L"CUT3;ANALOG;S7:[CUT3]DB17,REAL12,1", VT_R8 }, { L"CUT3;ANALOG;S7:[CUT3]DB17.REAL32,1", VT_R8 },
-			{ L"S7:[SUB3A18]DB20,REAL14,1", VT_R8, "FT01_UE" }, { L"S7:[SUB3A18]DB20,REAL18,1", VT_R8, "FT02_UE" }, { L"S7:[SUB3A18]DB20, REAL22, 1", VT_R8, "FT03_UE" },
-			{}, {}, {}, {}, {}, {},
+			// { L"S7:[SUB3A18]DB20,REAL14,1", VT_R8, "FT01_UE" }, { L"S7:[SUB3A18]DB20,REAL18,1", VT_R8, "FT02_UE" }, { L"S7:[SUB3A18]DB20, REAL22, 1", VT_R8, "FT03_UE" },
+			{}, {}, {}, {}, {}, {}, {}, {}, {}
 		},
-		{ SCALE_FACTOR, SCALE_FACTOR, SCALE_FACTOR },
+		// { SCALE_FACTOR, SCALE_FACTOR, SCALE_FACTOR },
+		{
+			{}, {}, {}, {}, {}, {}, {}, {}, {}
+		}
 	};
 GlobalData Gdata;
 
@@ -61,7 +66,9 @@ int InitOPC(void) {
 	// Inicializa o COM
 	CoInitialize(NULL);
 	// Conecta-se ao servidor OPC
-	IOPCServer * pIOPCServer = InstantiateServer(OPC_SERVER_NAME);
+	wchar_t wnome[50];
+	mbstowcs(wnome, ServerInfo.nome, strlen(ServerInfo.nome) + 1);
+	IOPCServer * pIOPCServer = InstantiateServer(wnome);
 	if (pIOPCServer == NULL) {
 		cout << "Erro ao conectar-se ao servidor: " << endl;
 		return 1;
@@ -77,7 +84,8 @@ int InitOPC(void) {
 	ServerInfo.pGroup = pIOPCItemMgt;
 	ServerInfo.hGroup = hServerGroup;
 	for (int i = 0; i < ServerInfo.numitems; ++i) {
-		hServerItem = AddTheItem(pIOPCItemMgt, ServerInfo.iteminfo[i].nome, ServerInfo.iteminfo[i].tipo);
+		mbstowcs(wnome, ServerInfo.iteminfo[i].nome, strlen(ServerInfo.iteminfo[i].nome) + 1);
+		hServerItem = AddTheItem(pIOPCItemMgt, wnome, ServerInfo.iteminfo[i].tipo);
 		if (hServerItem == 0) {
 			cout << "Erro ao criar o item " << i << ": " << * ServerInfo.iteminfo[i].nome << "." << endl;
 			return 1;
@@ -288,13 +296,13 @@ void readData(PanelData * plotdata) {
 		if (timelast == NULL) {
 			time(&tlast);
 			timelast = localtime(&tlast);
-		}
+			}
 		Gdata.tlast = tlast;
 		sprintf(ctime, RECFMTTIM, timelast->tm_year + 1900, timelast->tm_mon + 1, timelast->tm_mday, timelast->tm_hour, timelast->tm_min, timelast->tm_sec);
 		log_(2, cerr << " time = " << ctime;);
-	}
+		}
 	log_(2, cerr << "\n";);
-}
+	}
 
 FILE * openDatafile(char * datafile, void * data, bool * rfail) {
 	// Obtém os dados em um arquivo
@@ -350,12 +358,11 @@ GetlastRes fgetlast(char * fname, void * pdata) {
 	if (res != MAX_ITEMS + 2) {
 		fclose(fp);
 		return FGETLAST_ERRREAD;
-	}
+		}
 	fclose(fp);
 	return FGETLAST_OK;
 }
 
-// Funções para tratamento do buffer de recepção
 int mysplit(char * str, char car, char * dst, int siz) {
 	// Divide a string de acordo com o separador dado
 
@@ -382,6 +389,65 @@ int mysplit(char * str, char car, char * dst, int siz) {
 	return index;
 }
 
+int readCfg(void) {
+// Lê a configuração em disco
+	FILE * fp = fopen("scvropc.cfg", "r");
+	if (fp == NULL) {
+		return 1;
+		}
+	char record[50], dados[3][50];
+	fgets(record, 49, fp);
+	mysplit(record, ';', (char *)dados, 50);
+	strcpy(ServerInfo.nome, dados[0]);
+	int numitems = atoi(dados[1]);
+	ServerInfo.numitems = numitems;
+	log_(3, cerr << "Servidor = " << ServerInfo.nome << ", nitens = " << numitems << ")\n";);
+	for (int i = 0; i < numitems; ++i) {
+		fgets(record, 49, fp);
+		mysplit(record, ';', (char *) dados, 50);
+		strcpy(ServerInfo.iteminfo[i].tag, dados[0]);
+		strcpy(ServerInfo.iteminfo[i].nome, dados[1]);
+		VARTYPE tipo;
+		switch (dados[2][0]) {
+			case 'L':
+				tipo = VT_I4;
+				break;
+			case 'I':
+				tipo = VT_I2;
+				break;
+			case 'S':
+				tipo = VT_R4;
+				break;
+			case 'D':
+				tipo = VT_R8;
+				break;
+			}
+		ServerInfo.iteminfo[i].tipo = tipo;
+		ServerInfo.itemdata[i].factor = atof(dados[3]);
+		log_(3, cerr << "Tag = " << ServerInfo.iteminfo[i].tag << ", item = " << ServerInfo.iteminfo[i].nome << ", tipo = " << tipo << ", fator = " << ServerInfo.itemdata[i].factor << ")\n";);
+		}
+	fclose(fp);
+	}
+
+
+// Funções para tratamento de eventos
+void openexc(void) {
+// Trata o evento "botão 'Relatório' clicado"
+
+	PROCESS_INFORMATION processInfo;
+	STARTUPINFO startupInfo;
+	memset(&startupInfo, 0, sizeof(startupInfo));
+	memset(&processInfo, 0, sizeof(processInfo));
+	startupInfo.cb = sizeof startupInfo;
+	LPTSTR szCmdline = _tcsdup(TEXT(RELAT_PATH));
+	BOOL WINAPI ok = CreateProcess(NULL, szCmdline, NULL, NULL, FALSE, 0, NULL, NULL, &startupInfo, &processInfo);
+	if (!ok) {
+		log_(1, cerr << "Tentou partir o Excel, sem sucesso.\n";);
+		errno_t err = errno;
+		log_(2, cerr << "Erro = " << errno << ".\n";);
+		}
+	return;
+	}
 
 #define acum_( var ) 	( Gdata.current[ var ].mes )
 #define acud_( var ) 	( Gdata.current[ var ].dia )
@@ -472,7 +538,7 @@ void checktfront(bool * fronth, bool * frontd, bool * frontm, char * ctime) {
 		}
 	}
 
-int InitData(void) {
+int InitData(char ptags[MAX_ITEMS][50]) {
 // Inicializa as variáveis globais
 	Gdata.duplicated = false;
 	Gdata.zh = Gdata.zd = true;
@@ -502,13 +568,8 @@ int InitData(void) {
 	if (retcode != 0) {
 		return retcode;
 		}
-	return 0;
-	}
-
-int readCfg(void) {
-// Lê a configuração em disco
-	for (int i = 0; i < MAX_ITEMS; ++i) {
-		ServerInfo.itemdata[i].factor = 1e-3;
+	for (int i = 0; i < ServerInfo.numitems; ++i) {
+		strcpy(ptags[i], ServerInfo.iteminfo[i].tag);
 		}
 	return 0;
 	}

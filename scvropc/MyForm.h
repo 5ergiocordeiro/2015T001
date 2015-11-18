@@ -1,5 +1,7 @@
 void ReadAllItems(double * pval, char ptime[][50]);
 void ReadAcum(double * pval);
+void openexc(void);
+
 #define MAX_ITEMS 9
 
 #pragma once
@@ -50,6 +52,15 @@ namespace scvropc {
 			this -> label25 -> Text = "";
 			this -> label26 -> Text = "";
 			this -> label27 -> Text = "";
+			this -> label44 -> Text = "";
+			this -> label45 -> Text = "";
+			this -> label46 -> Text = "";
+			this -> label47 -> Text = "";
+			this -> label48 -> Text = "";
+			this -> label49 -> Text = "";
+			this -> label50 -> Text = "";
+			this -> label51 -> Text = "";
+			this -> label52 -> Text = "";
 			this -> timer1 -> Enabled = false;
 			this -> timer2 -> Enabled = false;
 			this -> timer3 -> Enabled = false;
@@ -57,6 +68,7 @@ namespace scvropc {
 			this -> timer2 -> Interval = 10000;
 			this -> timer3 -> Interval = 100000;
 			this -> button1-> Enabled = true;
+			this -> label44 -> Text = "";
 			//
 		}
 		void MyRefreshCurrent(double pvalue[MAX_ITEMS], char ptime[MAX_ITEMS][50]) {
@@ -108,7 +120,16 @@ namespace scvropc {
 			this -> label26 -> Text = pvalue[2][7].ToString("0.");
 			this -> label27 -> Text = pvalue[2][8].ToString("0.");
 			}
-		void enbupd(void) {
+		void enbupd(char ptags[MAX_ITEMS][50]) {
+			this -> label44 -> Text = gcnew String(ptags[0]);
+			this -> label45 -> Text = gcnew String(ptags[1]);
+			this -> label46 -> Text = gcnew String(ptags[2]);
+			this -> label47 -> Text = gcnew String(ptags[3]);
+			this -> label48 -> Text = gcnew String(ptags[4]);
+			this -> label49 -> Text = gcnew String(ptags[5]);
+			this -> label50 -> Text = gcnew String(ptags[6]);
+			this -> label51 -> Text = gcnew String(ptags[7]);
+			this -> label52 -> Text = gcnew String(ptags[8]);
 			this -> timer1 -> Enabled = true;
 			this -> timer2 -> Enabled = true;
 			this -> timer3 -> Enabled = true;
@@ -179,6 +200,16 @@ private: System::Windows::Forms::Label^  label39;
 private: System::Windows::Forms::Label^  label40;
 private: System::Windows::Forms::Label^  label41;
 private: System::Windows::Forms::Label^  label42;
+private: System::Windows::Forms::Label^  label43;
+private: System::Windows::Forms::Label^  label44;
+private: System::Windows::Forms::Label^  label45;
+private: System::Windows::Forms::Label^  label46;
+private: System::Windows::Forms::Label^  label47;
+private: System::Windows::Forms::Label^  label48;
+private: System::Windows::Forms::Label^  label49;
+private: System::Windows::Forms::Label^  label50;
+private: System::Windows::Forms::Label^  label51;
+private: System::Windows::Forms::Label^  label52;
 	private: System::ComponentModel::IContainer^  components;
 	protected:
 
@@ -251,10 +282,21 @@ private: System::Windows::Forms::Label^  label42;
 			this->label40 = (gcnew System::Windows::Forms::Label());
 			this->label41 = (gcnew System::Windows::Forms::Label());
 			this->label42 = (gcnew System::Windows::Forms::Label());
+			this->label43 = (gcnew System::Windows::Forms::Label());
+			this->label44 = (gcnew System::Windows::Forms::Label());
+			this->label45 = (gcnew System::Windows::Forms::Label());
+			this->label46 = (gcnew System::Windows::Forms::Label());
+			this->label47 = (gcnew System::Windows::Forms::Label());
+			this->label48 = (gcnew System::Windows::Forms::Label());
+			this->label49 = (gcnew System::Windows::Forms::Label());
+			this->label50 = (gcnew System::Windows::Forms::Label());
+			this->label51 = (gcnew System::Windows::Forms::Label());
+			this->label52 = (gcnew System::Windows::Forms::Label());
 			this->SuspendLayout();
 			// 
 			// textBox1
 			// 
+			this->textBox1->Enabled = false;
 			this->textBox1->Location = System::Drawing::Point(95, 57);
 			this->textBox1->Name = L"textBox1";
 			this->textBox1->Size = System::Drawing::Size(100, 20);
@@ -262,6 +304,7 @@ private: System::Windows::Forms::Label^  label42;
 			// 
 			// textBox2
 			// 
+			this->textBox2->Enabled = false;
 			this->textBox2->Location = System::Drawing::Point(95, 83);
 			this->textBox2->Name = L"textBox2";
 			this->textBox2->Size = System::Drawing::Size(100, 20);
@@ -269,6 +312,7 @@ private: System::Windows::Forms::Label^  label42;
 			// 
 			// textBox3
 			// 
+			this->textBox3->Enabled = false;
 			this->textBox3->Location = System::Drawing::Point(95, 109);
 			this->textBox3->Name = L"textBox3";
 			this->textBox3->Size = System::Drawing::Size(100, 20);
@@ -284,7 +328,7 @@ private: System::Windows::Forms::Label^  label42;
 			this->button1->Name = L"button1";
 			this->button1->Size = System::Drawing::Size(75, 23);
 			this->button1->TabIndex = 3;
-			this->button1->Text = L"Sair";
+			this->button1->Text = L"Relatório";
 			this->button1->UseVisualStyleBackColor = true;
 			this->button1->Click += gcnew System::EventHandler(this, &MyForm::button1_Click);
 			// 
@@ -294,6 +338,7 @@ private: System::Windows::Forms::Label^  label42;
 			// 
 			// textBox4
 			// 
+			this->textBox4->Enabled = false;
 			this->textBox4->Location = System::Drawing::Point(95, 135);
 			this->textBox4->Name = L"textBox4";
 			this->textBox4->Size = System::Drawing::Size(100, 20);
@@ -301,6 +346,7 @@ private: System::Windows::Forms::Label^  label42;
 			// 
 			// textBox5
 			// 
+			this->textBox5->Enabled = false;
 			this->textBox5->Location = System::Drawing::Point(95, 161);
 			this->textBox5->Name = L"textBox5";
 			this->textBox5->Size = System::Drawing::Size(100, 20);
@@ -308,6 +354,7 @@ private: System::Windows::Forms::Label^  label42;
 			// 
 			// textBox6
 			// 
+			this->textBox6->Enabled = false;
 			this->textBox6->Location = System::Drawing::Point(95, 187);
 			this->textBox6->Name = L"textBox6";
 			this->textBox6->Size = System::Drawing::Size(100, 20);
@@ -315,6 +362,7 @@ private: System::Windows::Forms::Label^  label42;
 			// 
 			// textBox7
 			// 
+			this->textBox7->Enabled = false;
 			this->textBox7->Location = System::Drawing::Point(95, 213);
 			this->textBox7->Name = L"textBox7";
 			this->textBox7->Size = System::Drawing::Size(100, 20);
@@ -322,6 +370,7 @@ private: System::Windows::Forms::Label^  label42;
 			// 
 			// textBox8
 			// 
+			this->textBox8->Enabled = false;
 			this->textBox8->Location = System::Drawing::Point(95, 239);
 			this->textBox8->Name = L"textBox8";
 			this->textBox8->Size = System::Drawing::Size(100, 20);
@@ -329,6 +378,7 @@ private: System::Windows::Forms::Label^  label42;
 			// 
 			// textBox9
 			// 
+			this->textBox9->Enabled = false;
 			this->textBox9->Location = System::Drawing::Point(95, 265);
 			this->textBox9->Name = L"textBox9";
 			this->textBox9->Size = System::Drawing::Size(100, 20);
@@ -714,11 +764,112 @@ private: System::Windows::Forms::Label^  label42;
 			this->label42->TabIndex = 51;
 			this->label42->Text = L"Consumo de água STRA (m3)";
 			// 
+			// label43
+			// 
+			this->label43->AutoSize = true;
+			this->label43->Location = System::Drawing::Point(30, 33);
+			this->label43->Name = L"label43";
+			this->label43->Size = System::Drawing::Size(26, 13);
+			this->label43->TabIndex = 61;
+			this->label43->Text = L"Tag";
+			// 
+			// label44
+			// 
+			this->label44->AutoSize = true;
+			this->label44->Location = System::Drawing::Point(22, 60);
+			this->label44->Name = L"label44";
+			this->label44->Size = System::Drawing::Size(41, 13);
+			this->label44->TabIndex = 60;
+			this->label44->Text = L"label44";
+			// 
+			// label45
+			// 
+			this->label45->AutoSize = true;
+			this->label45->Location = System::Drawing::Point(22, 86);
+			this->label45->Name = L"label45";
+			this->label45->Size = System::Drawing::Size(41, 13);
+			this->label45->TabIndex = 59;
+			this->label45->Text = L"label45";
+			// 
+			// label46
+			// 
+			this->label46->AutoSize = true;
+			this->label46->Location = System::Drawing::Point(22, 112);
+			this->label46->Name = L"label46";
+			this->label46->Size = System::Drawing::Size(41, 13);
+			this->label46->TabIndex = 58;
+			this->label46->Text = L"label46";
+			// 
+			// label47
+			// 
+			this->label47->AutoSize = true;
+			this->label47->Location = System::Drawing::Point(22, 138);
+			this->label47->Name = L"label47";
+			this->label47->Size = System::Drawing::Size(41, 13);
+			this->label47->TabIndex = 57;
+			this->label47->Text = L"label47";
+			// 
+			// label48
+			// 
+			this->label48->AutoSize = true;
+			this->label48->Location = System::Drawing::Point(22, 164);
+			this->label48->Name = L"label48";
+			this->label48->Size = System::Drawing::Size(41, 13);
+			this->label48->TabIndex = 56;
+			this->label48->Text = L"label48";
+			// 
+			// label49
+			// 
+			this->label49->AutoSize = true;
+			this->label49->Location = System::Drawing::Point(22, 190);
+			this->label49->Name = L"label49";
+			this->label49->Size = System::Drawing::Size(41, 13);
+			this->label49->TabIndex = 55;
+			this->label49->Text = L"label49";
+			// 
+			// label50
+			// 
+			this->label50->AutoSize = true;
+			this->label50->Location = System::Drawing::Point(22, 216);
+			this->label50->Name = L"label50";
+			this->label50->Size = System::Drawing::Size(41, 13);
+			this->label50->TabIndex = 54;
+			this->label50->Text = L"label50";
+			// 
+			// label51
+			// 
+			this->label51->AutoSize = true;
+			this->label51->Location = System::Drawing::Point(22, 242);
+			this->label51->Name = L"label51";
+			this->label51->Size = System::Drawing::Size(41, 13);
+			this->label51->TabIndex = 53;
+			this->label51->Text = L"label51";
+			// 
+			// label52
+			// 
+			this->label52->AutoSize = true;
+			this->label52->Location = System::Drawing::Point(22, 268);
+			this->label52->Name = L"label52";
+			this->label52->Size = System::Drawing::Size(41, 13);
+			this->label52->TabIndex = 52;
+			this->label52->Text = L"label52";
+			// 
 			// MyForm
 			// 
 			this->AutoScaleDimensions = System::Drawing::SizeF(6, 13);
 			this->AutoScaleMode = System::Windows::Forms::AutoScaleMode::Font;
 			this->ClientSize = System::Drawing::Size(581, 321);
+			this->ControlBox = false;
+			this->Controls->Add(this->label43);
+			this->Controls->Add(this->label44);
+			this->Controls->Add(this->label45);
+			this->Controls->Add(this->label46);
+			this->Controls->Add(this->label47);
+			this->Controls->Add(this->label48);
+			this->Controls->Add(this->label49);
+			this->Controls->Add(this->label50);
+			this->Controls->Add(this->label51);
+			this->Controls->Add(this->label52);
 			this->Controls->Add(this->label42);
 			this->Controls->Add(this->label32);
 			this->Controls->Add(this->label33);
@@ -771,7 +922,8 @@ private: System::Windows::Forms::Label^  label42;
 			this->Controls->Add(this->textBox3);
 			this->Controls->Add(this->textBox2);
 			this->Controls->Add(this->textBox1);
-			this->Enabled = false;
+			this->MaximizeBox = false;
+			this->MinimizeBox = false;
 			this->Name = L"MyForm";
 			this->Text = L"scvropc";
 			this->ResumeLayout(false);
@@ -786,8 +938,8 @@ private: System::Windows::Forms::Label^  label42;
 		ReadAllItems(varValue, varTime);
 		this -> MyRefreshCurrent(varValue, varTime);
 		}
-	private: System::Void button1_Click(System::Object^  sender, System::EventArgs^  e) {
-		this -> Close();
+	public: System::Void button1_Click(System::Object^  sender, System::EventArgs^  e) {
+		openexc();
 		}
 	private: System::Void timer2_Tick(System::Object^  sender, System::EventArgs^  e) {
 		// Exibe valores acumulados

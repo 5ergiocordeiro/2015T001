@@ -3,16 +3,18 @@
 
 #define MAX_ITEMS 9
 #define DEFAULT_VERBOSE 3
+// #define RELAT_PATH "\"C:\\Program Files (x86)\\LibreOffice 5\\program\\scalc.exe\" \"C:\\Users\\ASUS.1\\Dropbox\\Particular\\rdo.xls\""
+#define RELAT_PATH "\"C:\\Program Files\\Microsoft Office\\Office12\\excel.exe\" \"C:\\APP\\Relat\\Relatórios\\ts_rateio_mensal.xls\""
 
 typedef struct MyOPCItemInfo {
-	LPWSTR nome;
+	char nome[50], tag[50];
 	VARTYPE tipo;
-	char * tag;
 	};
 typedef struct MyOPCItemData {
 	double factor;
 	};
 typedef struct MyOPCServerInfo {
+	char nome[50];
 	bool inicializado;
 	IOPCServer * pServer;
 	OPCHANDLE hGroup, hItem[MAX_ITEMS];
@@ -37,22 +39,12 @@ const char * MDATAFILE = "d_dados.txt";
 const char * RECFMTWRT = "%s;%8.0f;%8.0f;%8.0f;%8.0f;%8.0f;%8.0f;%8.0f;%8.0f;%8.0f\n";
 const char * RECFMTRD = "%s;%s;%s;%s;%s;%s;%s;%s;%s;%s;%s";
 const char * RECFMTTIM = "%04d-%02d-%02d;%02d:%02d:%02d";
-const char * VAR1 = "FIX.VAZ_FIT1.F_CV";
-const char * VAR2 = "FIX.VAZ_FIT2.F_CV";
-const char * VAR3 = "FIX.VAZ_FIT3.F_CV";
-const char * VAR4 = "FIX.VAZ_FIT4.F_CV";
-const char * VAR5 = "FIX.VAZ_FIT5.F_CV";
-const char * VAR6 = "FIX.VAZ_FIT6.F_CV";
-const char * VAR7 = "FIX.VAZ_FIT9.F_CV";
-const char * VAR8 = "FIX.VAZ_FIT11.F_CV";
-const char * VAR9 = "FIX.VAZ_FIT12.F_CV";
 const int DREC_SIZE = 102;
 const char * WINDOW_TITLE = "Consumo de agua STRA";
 const float SCALE_FACTOR = 1.0 / 3600;
 
 
 // Enumerations
-typedef enum { PSERVER, TSERVER1, TSERVER2 } TServer;
 typedef enum { FGETLAST_OK, FGETLAST_ERROPEN, FGETLAST_ERRSEEK, FGETLAST_ERRREAD } GetlastRes;
 
 typedef struct {
@@ -108,6 +100,6 @@ void EndOPC(void);
 int RunOPC(void);
 double ReadTheItem(int item);
 void ReadAllItems(double * pval);
-int InitData(void);
+int InitData(char ptags[MAX_ITEMS][50]);
 int readCfg(void);
 #endif
