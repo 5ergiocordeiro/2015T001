@@ -3,6 +3,8 @@
 #include <iostream>
 #include <time.h>
 #include "opc_h.h"
+#include "Winuser.h"
+#include "WinBase.h"
 #include "header.h"
 
 #include <direct.h>
@@ -543,14 +545,12 @@ int InitData(char ptags[MAX_ITEMS][50]) {
 	Gdata.duplicated = false;
 	Gdata.zh = Gdata.zd = true;
 	Gdata.verbose = DEFAULT_VERBOSE;
-/*
-	EnumWindows((WNDENUMPROC) & lpfn, 0);
-	if (Gdata.duplicated) {
-		cerr << "Duplicado!";
-		return 1;
-		}
-*/
+	// Desabilita o botão para fechar a janela de console
+	#define MF_BYCOMMAND 0x00000000
+	#define SC_CLOSE 0xF060
+	DeleteMenu(GetSystemMenu(GetConsoleWindow(), false), SC_CLOSE, MF_BYCOMMAND);
 	// Lê os arquivos de configuração
+	exit(1);
 	int retcode = readCfg();
 	if (retcode != 0) {
 		return retcode;
@@ -572,22 +572,6 @@ int InitData(char ptags[MAX_ITEMS][50]) {
 		strcpy(ptags[i], ServerInfo.iteminfo[i].tag);
 		}
 	return 0;
-	}
-
-BOOL CALLBACK lpfn ( HWND hWnd , int lParam ) {
-// Enumera todas as janelas em busca do servidor DDE
-// Pode ser usada para descobrir o título de uma janela qualquer
-	char title [99] ;
-	int size ;
-	size = GetWindowText (hWnd , (LPWSTR) title , 100 ) ;
-	static int count = 0 ;
-	if ( size > 0 ) {
-		if ( strcmp ( title , WINDOW_TITLE ) == 0 ) {
-			Gdata . duplicated = true ;
-			return false ;
-			}
-		}
-	return true;
 	}
 
 void ReadAcum(double * pval) {

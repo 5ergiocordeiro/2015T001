@@ -2,7 +2,12 @@
 #define SIMPLE_OPC_CLIENT_H
 
 #define MAX_ITEMS 9
-#define DEFAULT_VERBOSE 3
+#define VERBOSE_ERROR 1
+#define VERBOSE_LOW 2
+#define VERBOSE_MEDIUM 3
+#define VERBOSE_HIGH 4
+#define DEFAULT_VERBOSE VERBOSE_LOW
+
 // #define RELAT_PATH "\"C:\\Program Files (x86)\\LibreOffice 5\\program\\scalc.exe\" \"C:\\Users\\ASUS.1\\Dropbox\\Particular\\rdo.xls\""
 #define RELAT_PATH "\"C:\\Program Files\\Microsoft Office\\Office12\\excel.exe\" \"C:\\APP\\Relat\\Relatórios\\ts_rateio_mensal.xls\""
 
@@ -40,7 +45,6 @@ const char * RECFMTWRT = "%s;%8.0f;%8.0f;%8.0f;%8.0f;%8.0f;%8.0f;%8.0f;%8.0f;%8.
 const char * RECFMTRD = "%s;%s;%s;%s;%s;%s;%s;%s;%s;%s;%s";
 const char * RECFMTTIM = "%04d-%02d-%02d;%02d:%02d:%02d";
 const int DREC_SIZE = 102;
-const char * WINDOW_TITLE = "Consumo de agua STRA";
 const float SCALE_FACTOR = 1.0 / 3600;
 
 
