@@ -102,8 +102,8 @@ void RemoveGroup(IOPCServer* pIOPCServer, OPCHANDLE hServerGroup);
 int InitOPC(void);
 void EndOPC(void);
 int RunOPC(void);
-double ReadTheItem(int item);
-void ReadAllItems(double * pval);
+double ReadTheItem(int item, bool * pleu);
+bool ReadAllItems(double * pval);
 int InitData(char ptags[MAX_ITEMS][50]);
 int readCfg(void);
 #endif

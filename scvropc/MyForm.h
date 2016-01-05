@@ -1,8 +1,9 @@
-void ReadAllItems(double * pval, char ptime[][50]);
+bool ReadAllItems(double * pval, char ptime[][50]);
 void ReadAcum(double * pval);
 void openexc(void);
 
 #define MAX_ITEMS 9
+#define MAX_ERROS_LEITURA 60
 
 #pragma once
 
@@ -68,7 +69,6 @@ namespace scvropc {
 			this -> timer2 -> Interval = 10000;
 			this -> timer3 -> Interval = 100000;
 			this -> button1-> Enabled = true;
-			this -> label44 -> Text = "";
 			//
 		}
 		void MyRefreshCurrent(double pvalue[MAX_ITEMS], char ptime[MAX_ITEMS][50]) {
@@ -934,10 +934,20 @@ private: System::Windows::Forms::Label^  label52;
 	private: System::Void timer1_Tick(System::Object^  sender, System::EventArgs^  e) {
 		// Lê dados do servidor OPC
 		static double varValue[MAX_ITEMS];
+		static int erros = 0;
 		static char varTime[MAX_ITEMS][50];
-		ReadAllItems(varValue, varTime);
-		this -> MyRefreshCurrent(varValue, varTime);
+		bool leu = ReadAllItems(varValue, varTime);
+		if (leu) {
+			this -> MyRefreshCurrent(varValue, varTime);
+			erros = 0;
+			}
+		else {
+			if (++ erros >= MAX_ERROS_LEITURA) {
+				Application::Exit();
+				}
+			}
 		}
+
 	public: System::Void button1_Click(System::Object^  sender, System::EventArgs^  e) {
 		openexc();
 		}

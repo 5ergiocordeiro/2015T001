@@ -42,7 +42,8 @@ int Main(void) {
 		cout << "Erro " << retcode << " na inicialização do OPC." << endl;
 		return retcode;
 		}
-	double value = ReadTheItem(0);
+	bool leu;
+	double value = ReadTheItem(0, & leu);
 	cout << "Read value: " << value << endl;
 	EndOPC();
 	}
@@ -165,7 +166,7 @@ OPCHANDLE AddTheItem(IOPCItemMgt* pIOPCItemMgt, LPWSTR ItemID, VARTYPE ItemType)
 	return hServerItem;
 	}
 
-double ReadTheItem(int item) {
+double ReadTheItem(int item, bool * pleu) {
 // Lê o ...item... no servidor OPC conectado e atualiza os acumuladores
 	VARIANT varValue;
 	VariantInit(& varValue);
@@ -173,6 +174,8 @@ double ReadTheItem(int item) {
 	time(& tnow);
 	int retcode = ReadItem(ServerInfo.pGroup, ServerInfo.hItem[item], varValue);
 	if (retcode != 0) {
+		log_(2, cerr << "Valor inválido, código " << retcode << ". Timestamp = " << tnow << "\n";);
+		* pleu = false;
 		return 0;
 		}
 	ReadData * pdata = & Gdata.current[item];
@@ -181,6 +184,7 @@ double ReadTheItem(int item) {
 	log_(3, cerr << "item " << item << " = " << last << " (Timestamp = " << tnow << ")\n";);
 	if (last < 0) {
 		log_(2, cerr << "valor " << last << " desprezado. Timestamps = " << lastt << " e " << tnow << "\n";);
+		last = 0;
 		}
 	pdata -> value = last;
 	pdata -> timestamp = tnow;
@@ -189,12 +193,15 @@ double ReadTheItem(int item) {
 	pdata -> hora += area;
 	pdata -> dia += area;
 	pdata -> mes += area;
+	* pleu = true;
 	return last;
 	}
 
-void ReadAllItems(double * pval, char ptime[][50]) {
+bool ReadAllItems(double * pval, char ptime[][50]) {
+	bool leu, algum = false;
 	for (int i = 0; i < ServerInfo.numitems; ++ i) {
-		* pval ++ = ReadTheItem(i);
+		* pval ++ = ReadTheItem(i, & leu);
+		algum = algum || leu;
 		}
 	char buf[50];
 	for (int i = 0; i < ServerInfo.numitems; ++ i) {
@@ -202,28 +209,43 @@ void ReadAllItems(double * pval, char ptime[][50]) {
 		strftime(buf, 50, "%H:%M:%S %d/%m/%Y", tp);
 		strcpy(ptime[i], buf);
 		}
+	if (!algum) {
+		log_(1, cerr << "Nenhum valor válido lido\n";);
+		}
+	return algum;
 	}
 
 int ReadItem(IUnknown * pGroup, OPCHANDLE hServerItem, VARIANT & varValue) {
 // Lê o valor atual do ...hServerItem... pertencente ao grupo apontado por ...pGroup... e grava-o em ...varValue...
-// Retorna 0 se tiver sucesso e 1 em caso de erro.
+// Retorna 0 se tiver sucesso, 1 em caso de erro na leitura e 2 em caso de leitura de dados ruim ou duvidoso.
 	// value of the item:
+	int retcode = 0;
 	OPCITEMSTATE* pValue = NULL;
 	IOPCSyncIO * pIOPCSyncIO;
 	pGroup -> QueryInterface(__uuidof(pIOPCSyncIO), (void**) & pIOPCSyncIO);
 	HRESULT* pErrors = NULL;
 	HRESULT hr = pIOPCSyncIO -> Read(OPC_DS_DEVICE, 1, & hServerItem, & pValue, & pErrors);
 	if ((hr != S_OK) || (pValue == NULL)) {
-		return 1;
+		retcode = 1;
 		}
-	varValue = pValue[0].vDataValue;
+	else {
+		if (pValue[0].wQuality < OPC_QUALITY_GOOD) {
+			retcode = 2;
+			}
+		}
+	if (retcode == 0) {
+		varValue = pValue[0].vDataValue;
+		}
+	else {
+		varValue.intVal = -1;
+		}
 	// Libera a memória alocada pelo servidor para essa operação
 	CoTaskMemFree(pErrors);
 	pErrors = NULL;
 	CoTaskMemFree(pValue);
 	pValue = NULL;
 	pIOPCSyncIO -> Release();
-	return 0;
+	return retcode;
 	}
 
 void RemoveItem(IOPCItemMgt * pIOPCItemMgt, OPCHANDLE hServerItem) {
@@ -392,7 +414,7 @@ int mysplit(char * str, char car, char * dst, int siz) {
 }
 
 int readCfg(void) {
-// Lê a configuração em disco
+	// Lê a configuração em disco
 	FILE * fp = fopen("scvropc.cfg", "r");
 	if (fp == NULL) {
 		return 1;
@@ -404,31 +426,36 @@ int readCfg(void) {
 	int numitems = atoi(dados[1]);
 	ServerInfo.numitems = numitems;
 	log_(3, cerr << "Servidor = " << ServerInfo.nome << ", nitens = " << numitems << ")\n";);
-	for (int i = 0; i < numitems; ++i) {
+	int i;
+	for (i = 0; i < numitems; ++i) {
 		fgets(record, 49, fp);
-		mysplit(record, ';', (char *) dados, 50);
+		mysplit(record, ';', (char *)dados, 50);
 		strcpy(ServerInfo.iteminfo[i].tag, dados[0]);
 		strcpy(ServerInfo.iteminfo[i].nome, dados[1]);
 		VARTYPE tipo;
 		switch (dados[2][0]) {
-			case 'L':
-				tipo = VT_I4;
-				break;
-			case 'I':
-				tipo = VT_I2;
-				break;
-			case 'S':
-				tipo = VT_R4;
-				break;
-			case 'D':
-				tipo = VT_R8;
-				break;
+		case 'L':
+			tipo = VT_I4;
+			break;
+		case 'I':
+			tipo = VT_I2;
+			break;
+		case 'S':
+			tipo = VT_R4;
+			break;
+		case 'D':
+			tipo = VT_R8;
+			break;
 			}
 		ServerInfo.iteminfo[i].tipo = tipo;
 		ServerInfo.itemdata[i].factor = atof(dados[3]);
 		log_(3, cerr << "Tag = " << ServerInfo.iteminfo[i].tag << ", item = " << ServerInfo.iteminfo[i].nome << ", tipo = " << tipo << ", fator = " << ServerInfo.itemdata[i].factor << ")\n";);
 		}
 	fclose(fp);
+	while (i < MAX_ITEMS) {
+		strcpy(ServerInfo.iteminfo[i++].tag, "");
+		}
+	return 0;
 	}
 
 
@@ -550,7 +577,6 @@ int InitData(char ptags[MAX_ITEMS][50]) {
 	#define SC_CLOSE 0xF060
 	DeleteMenu(GetSystemMenu(GetConsoleWindow(), false), SC_CLOSE, MF_BYCOMMAND);
 	// Lê os arquivos de configuração
-	exit(1);
 	int retcode = readCfg();
 	if (retcode != 0) {
 		return retcode;
@@ -568,7 +594,7 @@ int InitData(char ptags[MAX_ITEMS][50]) {
 	if (retcode != 0) {
 		return retcode;
 		}
-	for (int i = 0; i < ServerInfo.numitems; ++i) {
+	for (int i = 0; i < MAX_ITEMS; ++i) {
 		strcpy(ptags[i], ServerInfo.iteminfo[i].tag);
 		}
 	return 0;
